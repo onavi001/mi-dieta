@@ -10,8 +10,8 @@ interface MealCardProps {
 }
 
 export function MealCard({ comida, persona, isExpanded, onToggle, isCompleted, onToggleCompleted }: MealCardProps) {
-  const showOscar = persona !== 'paulina'
-  const showPaulina = persona !== 'oscar'
+  const showIvan = persona !== 'paulina'
+  const showPaulina = persona !== 'ivan'
 
   return (
     <div
@@ -58,10 +58,10 @@ export function MealCard({ comida, persona, isExpanded, onToggle, isCompleted, o
         <div className="mt-5 pt-5 border-t border-gray-100">
           {/* Porciones */}
           <div className="grid grid-cols-2 gap-3 mb-6">
-            {showOscar && (
-              <div className={`p-4 rounded-2xl ${persona === 'oscar' ? 'bg-green-50 border border-green-200' : 'bg-gray-50'}`}>
-                <p className="text-xs font-medium text-green-600 mb-1">OSCAR</p>
-                <p className="text-sm text-gray-800">{comida.oscar}</p>
+            {showIvan && (
+              <div className={`p-4 rounded-2xl ${persona === 'ivan' ? 'bg-green-50 border border-green-200' : 'bg-gray-50'}`}>
+                <p className="text-xs font-medium text-green-600 mb-1">IVAN</p>
+                <p className="text-sm text-gray-800">{comida.ivan}</p>
               </div>
             )}
             {showPaulina && (

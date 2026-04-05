@@ -1,4 +1,4 @@
-export type Persona = 'ambos' | 'oscar' | 'paulina'
+export type Persona = 'ambos' | 'ivan' | 'paulina'
 export type Tab = 'dieta' | 'super'
 
 export type TipoComida =
@@ -12,7 +12,7 @@ export interface Comida {
   day: string
   tipo: TipoComida
   nombre: string
-  oscar: string
+  ivan: string
   paulina: string
   receta: string
   tip: string

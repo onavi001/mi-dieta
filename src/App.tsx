@@ -17,14 +17,14 @@ export default function App() {
               <div className="w-9 h-9 bg-green-600 rounded-2xl flex items-center justify-center text-white text-2xl">🥗</div>
               <div>
                 <h1 className="text-xl font-semibold text-gray-900">Mi Dieta</h1>
-                <p className="text-xs text-green-600">Oscar &amp; Paulina</p>
+                <p className="text-xs text-green-600">Ivan &amp; Paulina</p>
               </div>
             </div>
           </div>
 
           {/* Toggle Persona */}
           <div className="flex bg-gray-100 rounded-3xl p-1 mt-5">
-            {(['ambos', 'oscar', 'paulina'] as const).map((p) => (
+            {(['ambos', 'ivan', 'paulina'] as const).map((p) => (
               <button
                 key={p}
                 onClick={() => setPersona(p)}
