@@ -1,6 +1,6 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "../node_modules/@navi01/react/dist/tailwind.css";
+@source "./**/*.{ts,tsx}";
+@config "../tailwind.config.js";
 
 @layer base {
   html { -webkit-tap-highlight-color: transparent; }

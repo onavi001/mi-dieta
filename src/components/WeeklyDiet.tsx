@@ -1,18 +1,44 @@
 import { useState } from 'react'
-import { DAYS, MEALS } from '../data/meals'
+import { DAYS } from '../data/weeklySlots'
 import { MealCard } from './MealCard'
 import type { Persona } from '../data/types'
 import { useLocalStorage } from '../hooks/useLocalStorage'
+import { buildWeeklyMeals, nextMealForSlot } from '../data/mealEngine'
+import { migrateStringArray, migrateStringMap } from '../hooks/localStorageMigrations'
+import { triggerHaptic } from '../utils/haptics'
+
+const SWIPE_TRIGGER = 72
 
 interface WeeklyDietProps {
   persona: Persona
+  focusMode: 'today' | 'week'
 }
 
-export function WeeklyDiet({ persona }: WeeklyDietProps) {
+interface LastAction {
+  cardId: string
+  previousState: boolean
+}
+
+export function WeeklyDiet({ persona, focusMode }: WeeklyDietProps) {
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
-  const [showOnlyToday, setShowOnlyToday] = useLocalStorage('showOnlyToday', false)
-  const [completedMeals, setCompletedMeals] = useLocalStorage<Set<string>>('completedMeals', new Set())
-  const [completedDays, setCompletedDays] = useLocalStorage<Set<string>>('completedDays', new Set())
+  const [selectedMealsBySlot, setSelectedMealsBySlot] = useLocalStorage<Record<string, string>>(
+    'selectedMealsBySlot',
+    {},
+    { migrate: (stored) => migrateStringMap(stored) }
+  )
+  const [completedMeals, setCompletedMeals] = useLocalStorage<string[]>(
+    'completedMeals',
+    [],
+    { migrate: (stored) => migrateStringArray(stored) }
+  )
+  const [completedDays, setCompletedDays] = useLocalStorage<string[]>(
+    'completedDays',
+    [],
+    { migrate: (stored) => migrateStringArray(stored) }
+  )
+  const [lastAction, setLastAction] = useState<LastAction | null>(null)
+
+  const meals = buildWeeklyMeals(selectedMealsBySlot)
 
   const today = new Date().toLocaleDateString('es-ES', { weekday: 'long' }).replace(/^\w/, c => c.toUpperCase())
 
@@ -27,47 +53,79 @@ export function WeeklyDiet({ persona }: WeeklyDietProps) {
   }
 
   const toggleMealCompleted = (cardId: string) => {
-    const newSet = new Set(completedMeals)
-    if (newSet.has(cardId)) {
-      newSet.delete(cardId)
+    const wasCompleted = completedMeals.includes(cardId)
+
+    if (wasCompleted) {
+      setCompletedMeals(completedMeals.filter((id) => id !== cardId))
     } else {
-      newSet.add(cardId)
+      setCompletedMeals([...completedMeals, cardId])
     }
-    setCompletedMeals(newSet)
+
+    triggerHaptic('success')
+    setLastAction({ cardId, previousState: wasCompleted })
   }
 
   const toggleDayCompleted = (day: string) => {
-    const newSet = new Set(completedDays)
-    if (newSet.has(day)) {
-      newSet.delete(day)
+    if (completedDays.includes(day)) {
+      setCompletedDays(completedDays.filter((d) => d !== day))
     } else {
-      newSet.add(day)
+      setCompletedDays([...completedDays, day])
     }
-    setCompletedDays(newSet)
+
+    triggerHaptic('light')
   }
 
-  const displayedDays = showOnlyToday ? DAYS.filter(d => d === today) : DAYS
+  const swapMeal = (slotId: string, tipo: (typeof meals)[number]['tipo'], currentMealId: string) => {
+    const nextMealId = nextMealForSlot(tipo, currentMealId)
+    setSelectedMealsBySlot({
+      ...selectedMealsBySlot,
+      [slotId]: nextMealId,
+    })
+
+    triggerHaptic('warning')
+  }
+
+  const displayedDays = focusMode === 'today' ? DAYS.filter(d => d === today) : DAYS
+  const todayMeals = meals.filter((meal) => meal.day === today)
+  const completedToday = todayMeals.filter((meal) => completedMeals.includes(meal.slotId)).length
+
+  const undoLastMealToggle = () => {
+    if (!lastAction) return
+
+    if (lastAction.previousState) {
+      if (!completedMeals.includes(lastAction.cardId)) {
+        setCompletedMeals([...completedMeals, lastAction.cardId])
+      }
+    } else {
+      setCompletedMeals(completedMeals.filter((id) => id !== lastAction.cardId))
+    }
+
+    setLastAction(null)
+  }
 
   return (
     <div className="px-4 py-6">
-      {/* Toggle para mostrar solo hoy */}
-      <div className="flex items-center justify-between mb-6">
-        <button
-          onClick={() => setShowOnlyToday(!showOnlyToday)}
-          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-            showOnlyToday ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-700'
-          }`}
-        >
-          {showOnlyToday ? 'Mostrar toda la semana' : 'Mostrar solo hoy'}
-        </button>
-        {showOnlyToday && (
-          <span className="text-sm text-gray-500">Hoy: {today}</span>
-        )}
+      <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-semibold text-gray-800">Progreso de hoy</p>
+          <span className="text-xs font-medium text-emerald-700 bg-emerald-50 rounded-full px-2.5 py-1">
+            {completedToday}/{todayMeals.length || 0}
+          </span>
+        </div>
+        <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-3">
+          <div
+            className="h-full bg-emerald-500 transition-all duration-300"
+            style={{ width: `${todayMeals.length ? (completedToday / todayMeals.length) * 100 : 0}%` }}
+          />
+        </div>
+        <p className="text-xs text-gray-500">
+          Desliza derecha para completar y izquierda para intercambiar.
+        </p>
       </div>
 
       {displayedDays.map((day) => {
-        const dayMeals = MEALS.filter((meal) => meal.day === day)
-        const isDayCompleted = completedDays.has(day)
+        const dayMeals = meals.filter((meal) => meal.day === day)
+        const isDayCompleted = completedDays.includes(day)
 
         return (
           <div key={day} className="mb-10">
@@ -85,17 +143,22 @@ export function WeeklyDiet({ persona }: WeeklyDietProps) {
               </button>
             </div>
             <div className="space-y-3">
-              {dayMeals.map((comida, index) => {
-                const cardId = `${day}-${index}`
+              {dayMeals.map((comida) => {
+                const cardId = comida.slotId
                 return (
                   <MealCard
                     key={cardId}
                     comida={comida}
+                    hour={comida.hour}
+                      swipeTrigger={SWIPE_TRIGGER}
                     persona={persona}
                     isExpanded={expandedCards.has(cardId)}
                     onToggle={() => toggleCard(cardId)}
-                    isCompleted={completedMeals.has(cardId)}
+                    isCompleted={completedMeals.includes(cardId)}
                     onToggleCompleted={() => toggleMealCompleted(cardId)}
+                    onSwapMeal={() => swapMeal(comida.slotId, comida.tipo, comida.id)}
+                    onQuickComplete={() => toggleMealCompleted(cardId)}
+                    onQuickSwap={() => swapMeal(comida.slotId, comida.tipo, comida.id)}
                   />
                 )
               })}
@@ -103,6 +166,20 @@ export function WeeklyDiet({ persona }: WeeklyDietProps) {
           </div>
         )
       })}
+
+      {lastAction && (
+        <div className="fixed bottom-24 left-0 right-0 px-4 z-40">
+          <div className="max-w-[430px] mx-auto bg-gray-900 text-white rounded-2xl px-4 py-3 flex items-center justify-between shadow-lg">
+            <span className="text-sm">Cambio aplicado</span>
+            <button
+              onClick={undoLastMealToggle}
+              className="text-sm font-semibold text-emerald-300"
+            >
+              Deshacer
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

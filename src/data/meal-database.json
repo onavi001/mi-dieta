@@ -1,0 +1,1437 @@
+{
+  "version": "2.0.0",
+  "notes": "Formato mejorado con ingredientes explícitos por comida",
+  "rules": {
+    "forbiddenIngredients": [
+      "pescado",
+      "atun",
+      "mariscos",
+      "nuez",
+      "almendra"
+    ],
+    "notes": "Sin lacteos regulares. Yogurt griego natural sin azucar permitido."
+  },
+  "meals": [
+    {
+      "id": "desayuno-yogurt-platano",
+      "tipo": "Desayuno",
+      "nombre": "Yogurt griego con platano, canela y chia",
+      "receta": "Sirve el yogurt en bowl, agrega el platano en rodajas, canela y chia.",
+      "tip": "Sin azucar anadida.",
+      "tags": [
+        "rapido",
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "yogurt",
+          "cantidadIvan": 200,
+          "cantidadPaulina": 150,
+          "unidad": "g",
+          "presentacion": "griego natural sin azucar"
+        },
+        {
+          "id": "platano",
+          "cantidadIvan": 0.5,
+          "cantidadPaulina": 0.5,
+          "unidad": "piezas",
+          "presentacion": "tabasco"
+        },
+        {
+          "id": "chia",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 0,
+          "unidad": "cdita",
+          "presentacion": "semilla entera"
+        },
+        {
+          "id": "canela",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 1,
+          "unidad": "pizca",
+          "presentacion": "molida"
+        }
+      ]
+    },
+    {
+      "id": "desayuno-yogurt-manzana",
+      "tipo": "Desayuno",
+      "nombre": "Yogurt griego con manzana rallada y canela",
+      "receta": "Ralla la manzana directamente en el bowl con yogurt, agrega canela al gusto.",
+      "tip": "Rapido y sumamente reflujo-amigable.",
+      "tags": [
+        "rapido",
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "yogurt",
+          "cantidadIvan": 200,
+          "cantidadPaulina": 150,
+          "unidad": "g",
+          "presentacion": "griego natural sin azucar"
+        },
+        {
+          "id": "manzana",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 0.5,
+          "unidad": "piezas",
+          "presentacion": "gala"
+        },
+        {
+          "id": "canela",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 1,
+          "unidad": "pizca",
+          "presentacion": "molida"
+        }
+      ]
+    },
+    {
+      "id": "desayuno-huevos-espinaca",
+      "tipo": "Desayuno",
+      "nombre": "Huevos revueltos con espinaca y jitomate cocido",
+      "receta": "Cocina jitomate y espinaca 4 min, agrega huevo batido y cocina hasta cuajar.",
+      "tip": "Preferir jitomate cocido por reflujo.",
+      "tags": [
+        "caliente",
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "huevo",
+          "cantidadIvan": 3,
+          "cantidadPaulina": 2,
+          "unidad": "piezas",
+          "presentacion": "blanco grande"
+        },
+        {
+          "id": "tortilla",
+          "cantidadIvan": 2,
+          "cantidadPaulina": 1,
+          "unidad": "piezas",
+          "presentacion": "maiz"
+        },
+        {
+          "id": "espinaca",
+          "cantidadIvan": 150,
+          "cantidadPaulina": 100,
+          "unidad": "g",
+          "presentacion": "fresca"
+        },
+        {
+          "id": "jitomate",
+          "cantidadIvan": 150,
+          "cantidadPaulina": 100,
+          "unidad": "g",
+          "presentacion": "saladet"
+        },
+        {
+          "id": "aceite",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 0.5,
+          "unidad": "cdita",
+          "presentacion": "oliva extra virgen"
+        }
+      ]
+    },
+    {
+      "id": "desayuno-huevos-nopales",
+      "tipo": "Desayuno",
+      "nombre": "Huevos con nopales y tortilla",
+      "receta": "Saltea nopales 5 min, agrega huevo batido y sirve con tortillas calientes.",
+      "tip": "Desayuno alto en saciedad.",
+      "tags": [
+        "mexicano",
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "huevo",
+          "cantidadIvan": 3,
+          "cantidadPaulina": 2,
+          "unidad": "piezas",
+          "presentacion": "blanco grande"
+        },
+        {
+          "id": "tortilla",
+          "cantidadIvan": 2,
+          "cantidadPaulina": 1,
+          "unidad": "piezas",
+          "presentacion": "maiz"
+        },
+        {
+          "id": "nopal",
+          "cantidadIvan": 200,
+          "cantidadPaulina": 150,
+          "unidad": "g",
+          "presentacion": "limpio en tiras"
+        },
+        {
+          "id": "aceite",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 0.5,
+          "unidad": "cdita",
+          "presentacion": "oliva extra virgen"
+        },
+        {
+          "id": "limon",
+          "cantidadIvan": 0.5,
+          "cantidadPaulina": 0.25,
+          "unidad": "piezas",
+          "presentacion": "con semilla"
+        }
+      ]
+    },
+    {
+      "id": "desayuno-huevo-cocido-fruta",
+      "tipo": "Desayuno",
+      "nombre": "Huevos cocidos con fruta y pan tostado",
+      "receta": "Hierve los huevos 10 min, enfria y pela. Tuesta el pan, agrega aguacate y sirve con fruta del dia.",
+      "tip": "Perfecto para preparar la noche anterior.",
+      "tags": [
+        "batch-friendly",
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "huevo",
+          "cantidadIvan": 2,
+          "cantidadPaulina": 2,
+          "unidad": "piezas",
+          "presentacion": "blanco grande"
+        },
+        {
+          "id": "pan",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 1,
+          "unidad": "rebanadas",
+          "presentacion": "integral de caja"
+        },
+        {
+          "id": "aguacate",
+          "cantidadIvan": 0.5,
+          "cantidadPaulina": 0.25,
+          "unidad": "piezas",
+          "presentacion": "hass"
+        },
+        {
+          "id": "manzana",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 0.5,
+          "unidad": "piezas",
+          "presentacion": "gala"
+        }
+      ]
+    },
+    {
+      "id": "desayuno-avena-platano",
+      "tipo": "Desayuno",
+      "nombre": "Avena cocida con platano y canela",
+      "receta": "Cocina la avena con agua, agrega platano en rodajas y canela.",
+      "tip": "Textura suave y muy saciante.",
+      "tags": [
+        "rapido",
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "avena",
+          "cantidadIvan": 50,
+          "cantidadPaulina": 33,
+          "unidad": "g",
+          "presentacion": "hojuela natural"
+        },
+        {
+          "id": "platano",
+          "cantidadIvan": 0.5,
+          "cantidadPaulina": 0.5,
+          "unidad": "piezas",
+          "presentacion": "tabasco"
+        },
+        {
+          "id": "canela",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 1,
+          "unidad": "pizca",
+          "presentacion": "molida"
+        }
+      ]
+    },
+    {
+      "id": "desayuno-avena-manzana",
+      "tipo": "Desayuno",
+      "nombre": "Avena cocida con manzana y canela",
+      "receta": "Cocina la avena con agua o leche de avena, agrega manzana picada y canela.",
+      "tip": "Textura suave y facil de digerir.",
+      "tags": [
+        "rapido",
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "avena",
+          "cantidadIvan": 50,
+          "cantidadPaulina": 33,
+          "unidad": "g",
+          "presentacion": "hojuela natural"
+        },
+        {
+          "id": "manzana",
+          "cantidadIvan": 0.5,
+          "cantidadPaulina": 0.5,
+          "unidad": "piezas",
+          "presentacion": "gala"
+        },
+        {
+          "id": "canela",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 1,
+          "unidad": "pizca",
+          "presentacion": "molida"
+        },
+        {
+          "id": "leche de avena",
+          "cantidadIvan": 0,
+          "cantidadPaulina": 200,
+          "unidad": "ml",
+          "presentacion": "sin azucar"
+        }
+      ]
+    },
+    {
+      "id": "snack-am-jicama-manzana",
+      "tipo": "Snack Mañana",
+      "nombre": "Jicama con limon + manzana",
+      "receta": "Corta jicama en bastones y agrega limon. Acompana con manzana.",
+      "tip": "Si hay reflujo, usar poco chile.",
+      "tags": [
+        "rapido",
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "jicama",
+          "cantidadIvan": 200,
+          "cantidadPaulina": 150,
+          "unidad": "g",
+          "presentacion": "entera"
+        },
+        {
+          "id": "manzana",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 0.5,
+          "unidad": "piezas",
+          "presentacion": "gala"
+        },
+        {
+          "id": "limon",
+          "cantidadIvan": 0.5,
+          "cantidadPaulina": 0.25,
+          "unidad": "piezas",
+          "presentacion": "con semilla"
+        }
+      ]
+    },
+    {
+      "id": "snack-am-yogurt-pera",
+      "tipo": "Snack Mañana",
+      "nombre": "Yogurt griego con pera",
+      "receta": "Corta pera en cubos y mezcla con yogurt griego natural.",
+      "tip": "Buena opcion para manana ocupada.",
+      "tags": [
+        "rapido"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "yogurt",
+          "cantidadIvan": 150,
+          "cantidadPaulina": 120,
+          "unidad": "g",
+          "presentacion": "griego natural sin azucar"
+        },
+        {
+          "id": "pera",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 0.5,
+          "unidad": "piezas",
+          "presentacion": "danjou"
+        }
+      ]
+    },
+    {
+      "id": "snack-am-pepino-fruta",
+      "tipo": "Snack Mañana",
+      "nombre": "Pepino con limon + fruta",
+      "receta": "Corta pepino en rodajas, agrega limon y sirve con la fruta del dia.",
+      "tip": "Hidratante y ligero.",
+      "tags": [
+        "rapido",
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "pepino",
+          "cantidadIvan": 200,
+          "cantidadPaulina": 150,
+          "unidad": "g",
+          "presentacion": "verde"
+        },
+        {
+          "id": "manzana",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 0.5,
+          "unidad": "piezas",
+          "presentacion": "gala"
+        },
+        {
+          "id": "limon",
+          "cantidadIvan": 0.5,
+          "cantidadPaulina": 0.25,
+          "unidad": "piezas",
+          "presentacion": "con semilla"
+        }
+      ]
+    },
+    {
+      "id": "snack-am-huevo-cocido",
+      "tipo": "Snack Mañana",
+      "nombre": "Huevo cocido con verduras y pan",
+      "receta": "Hierve huevo 10 min, pela y sirve con verduras crudas cortadas en bastones y pan tostado.",
+      "tip": "Muy saciante y facil de preparar durante la semana.",
+      "tags": [
+        "batch-friendly",
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "huevo",
+          "cantidadIvan": 2,
+          "cantidadPaulina": 1,
+          "unidad": "piezas",
+          "presentacion": "blanco grande"
+        },
+        {
+          "id": "pan",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 1,
+          "unidad": "rebanadas",
+          "presentacion": "integral de caja"
+        },
+        {
+          "id": "pepino",
+          "cantidadIvan": 100,
+          "cantidadPaulina": 100,
+          "unidad": "g",
+          "presentacion": "verde"
+        },
+        {
+          "id": "zanahoria",
+          "cantidadIvan": 50,
+          "cantidadPaulina": 50,
+          "unidad": "g",
+          "presentacion": "nantes"
+        }
+      ]
+    },
+    {
+      "id": "snack-am-yogurt-papaya",
+      "tipo": "Snack Mañana",
+      "nombre": "Yogurt griego con papaya",
+      "receta": "Mezcla yogurt natural con papaya fresca picada.",
+      "tip": "Papaya ayuda a la digestion.",
+      "tags": [
+        "rapido",
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "yogurt",
+          "cantidadIvan": 150,
+          "cantidadPaulina": 120,
+          "unidad": "g",
+          "presentacion": "griego natural sin azucar"
+        },
+        {
+          "id": "papaya",
+          "cantidadIvan": 100,
+          "cantidadPaulina": 50,
+          "unidad": "g",
+          "presentacion": "maradol"
+        }
+      ]
+    },
+    {
+      "id": "comida-pollo-plancha",
+      "tipo": "Comida",
+      "nombre": "Pollo a la plancha con arroz, frijoles y ensalada",
+      "receta": "Asa pechuga sazonada en sarten, acompana con arroz, frijoles y ensalada fresca.",
+      "tip": "Medir aceite: maximo 1-2 cditas.",
+      "tags": [
+        "batch-friendly",
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "pollo",
+          "presentacion": "milanesa",
+          "cantidadIvan": 160,
+          "cantidadPaulina": 100,
+          "unidad": "g"
+        },
+        {
+          "id": "arroz",
+          "cantidadIvan": 0.5,
+          "cantidadPaulina": 0.33,
+          "unidad": "tazas",
+          "presentacion": "integral crudo"
+        },
+        {
+          "id": "frijol",
+          "cantidadIvan": 0.5,
+          "cantidadPaulina": 0.33,
+          "unidad": "tazas",
+          "presentacion": "seco"
+        },
+        {
+          "id": "lechuga",
+          "cantidadIvan": 100,
+          "cantidadPaulina": 75,
+          "unidad": "g",
+          "presentacion": "romana"
+        },
+        {
+          "id": "pepino",
+          "cantidadIvan": 75,
+          "cantidadPaulina": 50,
+          "unidad": "g",
+          "presentacion": "verde"
+        },
+        {
+          "id": "aguacate",
+          "cantidadIvan": 0.5,
+          "cantidadPaulina": 0.25,
+          "unidad": "piezas",
+          "presentacion": "hass"
+        },
+        {
+          "id": "limon",
+          "cantidadIvan": 0.5,
+          "cantidadPaulina": 0.25,
+          "unidad": "piezas",
+          "presentacion": "con semilla"
+        },
+        {
+          "id": "aceite",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 0.5,
+          "unidad": "cdita",
+          "presentacion": "oliva extra virgen"
+        }
+      ]
+    },
+    {
+      "id": "comida-pollo-horno",
+      "tipo": "Comida",
+      "nombre": "Pollo al horno con papa y verduras",
+      "receta": "Hornea pollo con oregano y limon 20-25 min, sirve con papa hervida y verduras.",
+      "tip": "Preparar doble porcion para reutilizar en cena.",
+      "tags": [
+        "batch-friendly",
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "pollo",
+          "presentacion": "pechuga",
+          "cantidadIvan": 160,
+          "cantidadPaulina": 100,
+          "unidad": "g"
+        },
+        {
+          "id": "papa",
+          "cantidadIvan": 150,
+          "cantidadPaulina": 75,
+          "unidad": "g",
+          "presentacion": "blanca"
+        },
+        {
+          "id": "calabacita",
+          "cantidadIvan": 150,
+          "cantidadPaulina": 100,
+          "unidad": "g",
+          "presentacion": "italiana"
+        },
+        {
+          "id": "zanahoria",
+          "cantidadIvan": 100,
+          "cantidadPaulina": 75,
+          "unidad": "g",
+          "presentacion": "nantes"
+        },
+        {
+          "id": "limon",
+          "cantidadIvan": 0.5,
+          "cantidadPaulina": 0.25,
+          "unidad": "piezas",
+          "presentacion": "con semilla"
+        },
+        {
+          "id": "hierba",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 1,
+          "unidad": "pizca",
+          "presentacion": "seca surtida"
+        }
+      ]
+    },
+    {
+      "id": "comida-tinga-pollo",
+      "tipo": "Comida",
+      "nombre": "Tinga de pollo con tortillas y ensalada",
+      "receta": "Deshebra pollo cocido, guisa con jitomate cocido y cebolla. Servir con tortillas y ensalada.",
+      "tip": "Usar chipotle suave y poco por el reflujo.",
+      "tags": [
+        "mexicano"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "pollo",
+          "presentacion": "deshebrado",
+          "cantidadIvan": 150,
+          "cantidadPaulina": 100,
+          "unidad": "g"
+        },
+        {
+          "id": "tortilla",
+          "cantidadIvan": 2,
+          "cantidadPaulina": 1,
+          "unidad": "piezas",
+          "presentacion": "maiz"
+        },
+        {
+          "id": "jitomate",
+          "cantidadIvan": 200,
+          "cantidadPaulina": 150,
+          "unidad": "g",
+          "presentacion": "saladet"
+        },
+        {
+          "id": "cebolla",
+          "cantidadIvan": 50,
+          "cantidadPaulina": 30,
+          "unidad": "g",
+          "presentacion": "blanca"
+        },
+        {
+          "id": "chipotle",
+          "cantidadIvan": 0.5,
+          "cantidadPaulina": 0.25,
+          "unidad": "piezas",
+          "presentacion": "adobado en lata"
+        },
+        {
+          "id": "lechuga",
+          "cantidadIvan": 75,
+          "cantidadPaulina": 50,
+          "unidad": "g",
+          "presentacion": "romana"
+        },
+        {
+          "id": "aguacate",
+          "cantidadIvan": 0.5,
+          "cantidadPaulina": 0.25,
+          "unidad": "piezas",
+          "presentacion": "hass"
+        },
+        {
+          "id": "aceite",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 0.5,
+          "unidad": "cdita",
+          "presentacion": "oliva extra virgen"
+        }
+      ]
+    },
+    {
+      "id": "comida-lentejas-pollo",
+      "tipo": "Comida",
+      "nombre": "Sopa de lentejas con pollo deshebrado",
+      "receta": "Cocina lentejas con zanahoria y calabacita; agrega pollo deshebrado al final.",
+      "tip": "Mantenerla tibia, no muy caliente.",
+      "tags": [
+        "batch-friendly",
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "lenteja",
+          "cantidadIvan": 300,
+          "cantidadPaulina": 200,
+          "unidad": "g",
+          "presentacion": "seca"
+        },
+        {
+          "id": "pollo",
+          "presentacion": "deshebrado",
+          "cantidadIvan": 100,
+          "cantidadPaulina": 70,
+          "unidad": "g"
+        },
+        {
+          "id": "zanahoria",
+          "cantidadIvan": 100,
+          "cantidadPaulina": 75,
+          "unidad": "g",
+          "presentacion": "nantes"
+        },
+        {
+          "id": "calabacita",
+          "cantidadIvan": 150,
+          "cantidadPaulina": 100,
+          "unidad": "g",
+          "presentacion": "italiana"
+        },
+        {
+          "id": "caldo",
+          "cantidadIvan": 500,
+          "cantidadPaulina": 350,
+          "unidad": "ml",
+          "presentacion": "pollo bajo sodio"
+        },
+        {
+          "id": "lechuga",
+          "cantidadIvan": 75,
+          "cantidadPaulina": 50,
+          "unidad": "g",
+          "presentacion": "romana"
+        }
+      ]
+    },
+    {
+      "id": "comida-res-magra",
+      "tipo": "Comida",
+      "nombre": "Res magra con arroz y calabacita",
+      "receta": "Sella la res en sarten antiadherente, sirve con arroz cocido y calabacita salteada.",
+      "tip": "Usar solo 1 vez por semana para variedad.",
+      "tags": [
+        "variedad"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "res",
+          "presentacion": "bistec magro",
+          "cantidadIvan": 140,
+          "cantidadPaulina": 90,
+          "unidad": "g"
+        },
+        {
+          "id": "arroz",
+          "cantidadIvan": 0.5,
+          "cantidadPaulina": 0.33,
+          "unidad": "tazas",
+          "presentacion": "integral crudo"
+        },
+        {
+          "id": "calabacita",
+          "cantidadIvan": 200,
+          "cantidadPaulina": 150,
+          "unidad": "g",
+          "presentacion": "italiana"
+        },
+        {
+          "id": "lechuga",
+          "cantidadIvan": 75,
+          "cantidadPaulina": 50,
+          "unidad": "g",
+          "presentacion": "romana"
+        },
+        {
+          "id": "limon",
+          "cantidadIvan": 0.5,
+          "cantidadPaulina": 0.25,
+          "unidad": "piezas",
+          "presentacion": "con semilla"
+        },
+        {
+          "id": "aceite",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 0.5,
+          "unidad": "cdita",
+          "presentacion": "oliva extra virgen"
+        }
+      ]
+    },
+    {
+      "id": "comida-pollo-sopa",
+      "tipo": "Comida",
+      "nombre": "Pollo con sopa ligera de verduras",
+      "receta": "Cocina sopa con verduras, agrega pollo cortado y caldo de pollo casero.",
+      "tip": "Muy hidratante y reflujo-amigable, ideal para mediodias calurosos.",
+      "tags": [
+        "reflujo-amigable",
+        "batch-friendly"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "pollo",
+          "presentacion": "pechuga en cubos",
+          "cantidadIvan": 160,
+          "cantidadPaulina": 100,
+          "unidad": "g"
+        },
+        {
+          "id": "calabacita",
+          "cantidadIvan": 200,
+          "cantidadPaulina": 150,
+          "unidad": "g",
+          "presentacion": "italiana"
+        },
+        {
+          "id": "zanahoria",
+          "cantidadIvan": 100,
+          "cantidadPaulina": 75,
+          "unidad": "g",
+          "presentacion": "nantes"
+        },
+        {
+          "id": "caldo",
+          "cantidadIvan": 500,
+          "cantidadPaulina": 350,
+          "unidad": "ml",
+          "presentacion": "pollo bajo sodio"
+        },
+        {
+          "id": "lechuga",
+          "cantidadIvan": 75,
+          "cantidadPaulina": 50,
+          "unidad": "g",
+          "presentacion": "romana"
+        }
+      ]
+    },
+    {
+      "id": "comida-huevo-cocido",
+      "tipo": "Comida",
+      "nombre": "Huevos cocidos con arroz y verduras",
+      "receta": "Hierve huevos 10 min, sirve con arroz cocido y verduras al vapor con limon.",
+      "tip": "Preparar huevos la noche anterior para ahorrar tiempo.",
+      "tags": [
+        "batch-friendly",
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "huevo",
+          "cantidadIvan": 4,
+          "cantidadPaulina": 3,
+          "unidad": "piezas",
+          "presentacion": "blanco grande"
+        },
+        {
+          "id": "arroz",
+          "cantidadIvan": 0.5,
+          "cantidadPaulina": 0.33,
+          "unidad": "tazas",
+          "presentacion": "integral crudo"
+        },
+        {
+          "id": "calabacita",
+          "cantidadIvan": 150,
+          "cantidadPaulina": 100,
+          "unidad": "g",
+          "presentacion": "italiana"
+        },
+        {
+          "id": "zanahoria",
+          "cantidadIvan": 100,
+          "cantidadPaulina": 75,
+          "unidad": "g",
+          "presentacion": "nantes"
+        },
+        {
+          "id": "limon",
+          "cantidadIvan": 0.5,
+          "cantidadPaulina": 0.25,
+          "unidad": "piezas",
+          "presentacion": "con semilla"
+        }
+      ]
+    },
+    {
+      "id": "comida-pavo-papa",
+      "tipo": "Comida",
+      "nombre": "Pavo molido con papa y verduras",
+      "receta": "Cocina pavo molido en sarten sin aceite, sirve con papa hervida y verduras.",
+      "tip": "El pavo es mas magro que pollo.",
+      "tags": [
+        "variedad"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "pavo",
+          "presentacion": "molido",
+          "cantidadIvan": 160,
+          "cantidadPaulina": 100,
+          "unidad": "g"
+        },
+        {
+          "id": "papa",
+          "cantidadIvan": 150,
+          "cantidadPaulina": 75,
+          "unidad": "g",
+          "presentacion": "blanca"
+        },
+        {
+          "id": "calabacita",
+          "cantidadIvan": 150,
+          "cantidadPaulina": 100,
+          "unidad": "g",
+          "presentacion": "italiana"
+        },
+        {
+          "id": "lechuga",
+          "cantidadIvan": 75,
+          "cantidadPaulina": 50,
+          "unidad": "g",
+          "presentacion": "romana"
+        }
+      ]
+    },
+    {
+      "id": "snack-pm-yogurt-fruta",
+      "tipo": "Snack Tarde",
+      "nombre": "Yogurt griego con fruta",
+      "receta": "Mezcla yogurt griego natural con fruta picada de temporada.",
+      "tip": "Si hay acidez nocturna, mover este snack mas temprano.",
+      "tags": [
+        "rapido"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "yogurt",
+          "cantidadIvan": 150,
+          "cantidadPaulina": 120,
+          "unidad": "g",
+          "presentacion": "griego natural sin azucar"
+        },
+        {
+          "id": "manzana",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 0.5,
+          "unidad": "piezas",
+          "presentacion": "gala"
+        }
+      ]
+    },
+    {
+      "id": "snack-pm-pollo-cocido",
+      "tipo": "Snack Tarde",
+      "nombre": "Pollo cocido con verduras",
+      "receta": "Sirve pollo sobrante con verduras crudas (pepino, zanahoria, lechuga) y fruta.",
+      "tip": "Muy saciante y bajo en calorias.",
+      "tags": [
+        "batch-friendly",
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "pollo",
+          "presentacion": "deshebrado",
+          "cantidadIvan": 100,
+          "cantidadPaulina": 70,
+          "unidad": "g"
+        },
+        {
+          "id": "pepino",
+          "cantidadIvan": 150,
+          "cantidadPaulina": 120,
+          "unidad": "g",
+          "presentacion": "verde"
+        },
+        {
+          "id": "zanahoria",
+          "cantidadIvan": 75,
+          "cantidadPaulina": 50,
+          "unidad": "g",
+          "presentacion": "nantes"
+        },
+        {
+          "id": "lechuga",
+          "cantidadIvan": 50,
+          "cantidadPaulina": 40,
+          "unidad": "g",
+          "presentacion": "romana"
+        },
+        {
+          "id": "manzana",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 0.5,
+          "unidad": "piezas",
+          "presentacion": "gala"
+        }
+      ]
+    },
+    {
+      "id": "snack-pm-huevo-cocido",
+      "tipo": "Snack Tarde",
+      "nombre": "Huevos cocidos con verduras y fruta",
+      "receta": "Hierve huevos, pela y sirve con verduras crudas y fruta del dia.",
+      "tip": "Excelente opcion para evitar antojos nocturnos.",
+      "tags": [
+        "batch-friendly",
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "huevo",
+          "cantidadIvan": 2,
+          "cantidadPaulina": 1,
+          "unidad": "piezas",
+          "presentacion": "blanco grande"
+        },
+        {
+          "id": "pepino",
+          "cantidadIvan": 150,
+          "cantidadPaulina": 120,
+          "unidad": "g",
+          "presentacion": "verde"
+        },
+        {
+          "id": "zanahoria",
+          "cantidadIvan": 75,
+          "cantidadPaulina": 50,
+          "unidad": "g",
+          "presentacion": "nantes"
+        },
+        {
+          "id": "lechuga",
+          "cantidadIvan": 50,
+          "cantidadPaulina": 40,
+          "unidad": "g",
+          "presentacion": "romana"
+        },
+        {
+          "id": "manzana",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 0.5,
+          "unidad": "piezas",
+          "presentacion": "gala"
+        }
+      ]
+    },
+    {
+      "id": "snack-pm-yogurt-papaya",
+      "tipo": "Snack Tarde",
+      "nombre": "Yogurt griego con papaya",
+      "receta": "Mezcla yogurt natural con papaya fresca.",
+      "tip": "Papaya facilita la digestion.",
+      "tags": [
+        "rapido",
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "yogurt",
+          "cantidadIvan": 150,
+          "cantidadPaulina": 120,
+          "unidad": "g",
+          "presentacion": "griego natural sin azucar"
+        },
+        {
+          "id": "papaya",
+          "cantidadIvan": 100,
+          "cantidadPaulina": 50,
+          "unidad": "g",
+          "presentacion": "maradol"
+        }
+      ]
+    },
+    {
+      "id": "snack-pm-manzana",
+      "tipo": "Snack Tarde",
+      "nombre": "Manzana con pan tostado",
+      "receta": "Corta la manzana en rodajas, tuesta el pan y acompana.",
+      "tip": "Snack simple y reflujo-amigable.",
+      "tags": [
+        "rapido",
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "manzana",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 0.5,
+          "unidad": "piezas",
+          "presentacion": "gala"
+        },
+        {
+          "id": "pan",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 1,
+          "unidad": "rebanadas",
+          "presentacion": "integral de caja"
+        }
+      ]
+    },
+    {
+      "id": "cena-ensalada-pollo",
+      "tipo": "Cena",
+      "nombre": "Ensalada grande con pollo deshebrado",
+      "receta": "Combina lechuga, pepino, zanahoria, pollo deshebrado. Aderezo de limon y aceite.",
+      "tip": "Cena ligera antes de las 20:00.",
+      "tags": [
+        "reflujo-amigable",
+        "batch-friendly"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "pollo",
+          "presentacion": "deshebrado",
+          "cantidadIvan": 100,
+          "cantidadPaulina": 70,
+          "unidad": "g"
+        },
+        {
+          "id": "lechuga",
+          "cantidadIvan": 150,
+          "cantidadPaulina": 100,
+          "unidad": "g",
+          "presentacion": "romana"
+        },
+        {
+          "id": "pepino",
+          "cantidadIvan": 100,
+          "cantidadPaulina": 75,
+          "unidad": "g",
+          "presentacion": "verde"
+        },
+        {
+          "id": "zanahoria",
+          "cantidadIvan": 75,
+          "cantidadPaulina": 50,
+          "unidad": "g",
+          "presentacion": "nantes"
+        },
+        {
+          "id": "limon",
+          "cantidadIvan": 0.5,
+          "cantidadPaulina": 0.25,
+          "unidad": "piezas",
+          "presentacion": "con semilla"
+        },
+        {
+          "id": "aceite",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 0.5,
+          "unidad": "cdita",
+          "presentacion": "oliva extra virgen"
+        }
+      ]
+    },
+    {
+      "id": "cena-omelette-calabacita",
+      "tipo": "Cena",
+      "nombre": "Omelette de huevo con calabacita y espinaca",
+      "receta": "Saltea verduras 3-4 min, agrega huevo batido y cocina a fuego medio.",
+      "tip": "Evitar salsas picantes en la noche.",
+      "tags": [
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "huevo",
+          "cantidadIvan": 2,
+          "cantidadPaulina": 2,
+          "unidad": "piezas",
+          "presentacion": "blanco grande"
+        },
+        {
+          "id": "calabacita",
+          "cantidadIvan": 150,
+          "cantidadPaulina": 100,
+          "unidad": "g",
+          "presentacion": "italiana"
+        },
+        {
+          "id": "espinaca",
+          "cantidadIvan": 100,
+          "cantidadPaulina": 75,
+          "unidad": "g",
+          "presentacion": "fresca"
+        },
+        {
+          "id": "lechuga",
+          "cantidadIvan": 75,
+          "cantidadPaulina": 50,
+          "unidad": "g",
+          "presentacion": "romana"
+        },
+        {
+          "id": "aceite",
+          "cantidadIvan": 1,
+          "cantidadPaulina": 0.5,
+          "unidad": "cdita",
+          "presentacion": "oliva extra virgen"
+        }
+      ]
+    },
+    {
+      "id": "cena-sopa-lentejas-ligera",
+      "tipo": "Cena",
+      "nombre": "Sopa ligera de lentejas con ensalada",
+      "receta": "Calienta sopa de lentejas ya cocida, sirve tibia con ensalada de pepino.",
+      "tip": "No cenar muy caliente para evitar reflujo.",
+      "tags": [
+        "batch-friendly",
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "lenteja",
+          "cantidadIvan": 250,
+          "cantidadPaulina": 180,
+          "unidad": "g",
+          "presentacion": "seca"
+        },
+        {
+          "id": "pepino",
+          "cantidadIvan": 150,
+          "cantidadPaulina": 100,
+          "unidad": "g",
+          "presentacion": "verde"
+        },
+        {
+          "id": "lechuga",
+          "cantidadIvan": 75,
+          "cantidadPaulina": 50,
+          "unidad": "g",
+          "presentacion": "romana"
+        }
+      ]
+    },
+    {
+      "id": "cena-bowl-arroz-pollo",
+      "tipo": "Cena",
+      "nombre": "Bowl ligero de arroz, pollo y verduras",
+      "receta": "Mezcla pollo deshebrado, arroz cocido y verduras al vapor con limon.",
+      "tip": "Usar porcion mas pequena que en comida principal.",
+      "tags": [
+        "batch-friendly",
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "pollo",
+          "presentacion": "deshebrado",
+          "cantidadIvan": 100,
+          "cantidadPaulina": 70,
+          "unidad": "g"
+        },
+        {
+          "id": "arroz",
+          "cantidadIvan": 0.33,
+          "cantidadPaulina": 0.25,
+          "unidad": "tazas",
+          "presentacion": "integral crudo"
+        },
+        {
+          "id": "calabacita",
+          "cantidadIvan": 120,
+          "cantidadPaulina": 80,
+          "unidad": "g",
+          "presentacion": "italiana"
+        },
+        {
+          "id": "zanahoria",
+          "cantidadIvan": 80,
+          "cantidadPaulina": 50,
+          "unidad": "g",
+          "presentacion": "nantes"
+        },
+        {
+          "id": "limon",
+          "cantidadIvan": 0.5,
+          "cantidadPaulina": 0.25,
+          "unidad": "piezas",
+          "presentacion": "con semilla"
+        }
+      ]
+    },
+    {
+      "id": "cena-huevo-cocido-ensalada",
+      "tipo": "Cena",
+      "nombre": "Huevos cocidos con ensalada grande",
+      "receta": "Hierve huevos 10 min, pela y sirve con ensalada fresca de verduras crudas.",
+      "tip": "Cena muy ligera y saciante.",
+      "tags": [
+        "batch-friendly",
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "huevo",
+          "cantidadIvan": 3,
+          "cantidadPaulina": 2,
+          "unidad": "piezas",
+          "presentacion": "blanco grande"
+        },
+        {
+          "id": "lechuga",
+          "cantidadIvan": 150,
+          "cantidadPaulina": 100,
+          "unidad": "g",
+          "presentacion": "romana"
+        },
+        {
+          "id": "pepino",
+          "cantidadIvan": 100,
+          "cantidadPaulina": 75,
+          "unidad": "g",
+          "presentacion": "verde"
+        },
+        {
+          "id": "zanahoria",
+          "cantidadIvan": 75,
+          "cantidadPaulina": 50,
+          "unidad": "g",
+          "presentacion": "nantes"
+        },
+        {
+          "id": "limon",
+          "cantidadIvan": 0.5,
+          "cantidadPaulina": 0.25,
+          "unidad": "piezas",
+          "presentacion": "con semilla"
+        }
+      ]
+    },
+    {
+      "id": "cena-sopa-pollo",
+      "tipo": "Cena",
+      "nombre": "Sopa ligera de pollo con verduras",
+      "receta": "Cocina sopa con verduras (calabacita, zanahoria, caldo), agrega pollo al final.",
+      "tip": "Muy hidratante y reflujo-amigable.",
+      "tags": [
+        "batch-friendly",
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "pollo",
+          "presentacion": "pechuga en cubos",
+          "cantidadIvan": 80,
+          "cantidadPaulina": 50,
+          "unidad": "g"
+        },
+        {
+          "id": "calabacita",
+          "cantidadIvan": 150,
+          "cantidadPaulina": 100,
+          "unidad": "g",
+          "presentacion": "italiana"
+        },
+        {
+          "id": "zanahoria",
+          "cantidadIvan": 100,
+          "cantidadPaulina": 75,
+          "unidad": "g",
+          "presentacion": "nantes"
+        },
+        {
+          "id": "caldo",
+          "cantidadIvan": 400,
+          "cantidadPaulina": 300,
+          "unidad": "ml",
+          "presentacion": "pollo bajo sodio"
+        },
+        {
+          "id": "lechuga",
+          "cantidadIvan": 75,
+          "cantidadPaulina": 50,
+          "unidad": "g",
+          "presentacion": "romana"
+        }
+      ]
+    },
+    {
+      "id": "cena-papilla-verduras",
+      "tipo": "Cena",
+      "nombre": "Puree de verduras con pollo cocido",
+      "receta": "Cocina verduras, licua suave, sirve con pollo desmenuzado y ensalada.",
+      "tip": "Muy facil de digerir para noches complicadas.",
+      "tags": [
+        "reflujo-amigable"
+      ],
+      "forbiddenIngredients": [],
+      "ingredientes": [
+        {
+          "id": "calabacita",
+          "cantidadIvan": 150,
+          "cantidadPaulina": 120,
+          "unidad": "g",
+          "presentacion": "italiana"
+        },
+        {
+          "id": "papa",
+          "cantidadIvan": 100,
+          "cantidadPaulina": 75,
+          "unidad": "g",
+          "presentacion": "blanca"
+        },
+        {
+          "id": "zanahoria",
+          "cantidadIvan": 80,
+          "cantidadPaulina": 60,
+          "unidad": "g",
+          "presentacion": "nantes"
+        },
+        {
+          "id": "pollo",
+          "presentacion": "desmenuzado",
+          "cantidadIvan": 80,
+          "cantidadPaulina": 50,
+          "unidad": "g"
+        },
+        {
+          "id": "lechuga",
+          "cantidadIvan": 75,
+          "cantidadPaulina": 50,
+          "unidad": "g",
+          "presentacion": "romana"
+        }
+      ]
+    }
+  ]
+}
