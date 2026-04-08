@@ -86,6 +86,7 @@ export function useLocalStorage<T>(key: string, initial: T, options?: UseLocalSt
   }
 
   const pullRemote = async () => {
+    if (pendingPushCount.current > 0) return
     try {
       const response = await fetch(`${sharedApiBase}?key=${encodeURIComponent(key)}`)
       if (!response.ok) return
@@ -102,7 +103,10 @@ export function useLocalStorage<T>(key: string, initial: T, options?: UseLocalSt
     }
   }
 
+  const pendingPushCount = useRef(0)
+
   const pushRemote = async (next: T) => {
+    pendingPushCount.current++
     try {
       await fetch(`${sharedApiBase}?key=${encodeURIComponent(key)}`, {
         method: 'PUT',
@@ -113,6 +117,8 @@ export function useLocalStorage<T>(key: string, initial: T, options?: UseLocalSt
       })
     } catch {
       // ignore network failures and keep local mode
+    } finally {
+      pendingPushCount.current--
     }
   }
 
@@ -127,9 +133,10 @@ export function useLocalStorage<T>(key: string, initial: T, options?: UseLocalSt
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, sharedApiBase])
 
-  const set = (next: T) => {
-    saveLocal(next)
-    void pushRemote(next)
+  const set = (next: T | ((prev: T) => T)) => {
+    const resolved = typeof next === 'function' ? (next as (prev: T) => T)(valueRef.current) : next
+    saveLocal(resolved)
+    void pushRemote(resolved)
   }
 
   return [value, set] as const

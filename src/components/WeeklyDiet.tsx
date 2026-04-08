@@ -77,11 +77,7 @@ export function WeeklyDiet({ persona, focusMode }: WeeklyDietProps) {
 
   const swapMeal = (slotId: string, tipo: (typeof meals)[number]['tipo'], currentMealId: string) => {
     const nextMealId = nextMealForSlot(tipo, currentMealId)
-    setSelectedMealsBySlot({
-      ...selectedMealsBySlot,
-      [slotId]: nextMealId,
-    })
-
+    setSelectedMealsBySlot(prev => ({ ...prev, [slotId]: nextMealId }))
     triggerHaptic('warning')
   }
 

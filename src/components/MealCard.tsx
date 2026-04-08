@@ -132,11 +132,13 @@ export function MealCard({
       {isExpanded && (
         <div className="mt-5 pt-5 border-t border-gray-100">
           <button
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
             onClick={(e) => {
               e.stopPropagation()
               onSwapMeal()
             }}
-            className="mb-4 px-3 py-2 rounded-xl text-sm font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+            className="mb-4 px-3 py-2 min-h-11 rounded-xl text-sm font-medium bg-blue-50 text-blue-700 active:bg-blue-100 transition-colors"
           >
             Intercambiar comida
           </button>
