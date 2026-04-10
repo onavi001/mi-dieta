@@ -40,6 +40,11 @@ export function createDietApiClient(request: DietApiRequest) {
       slot: slotId,
       completed,
     }),
+    setSlotMeal: (slotId: string, meal: RawMeal, week?: string) => request<{ plan: RawPlan | null }>('/api/plans/my/slot', 'PUT', {
+      slot: slotId,
+      meal,
+      week,
+    }),
     replaceIngredient: (slotId: string, ingredientIndex: number, nextIngredientId: string, week?: string) => request<{ plan: RawPlan | null }>('/api/plans/my/ingredient', 'PUT', {
       slot: slotId,
       ingredientIndex,

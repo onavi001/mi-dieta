@@ -3,6 +3,7 @@ import type { Comida, TipoComida } from '../data/types'
 import { getApiBaseUrl } from '../utils/apiBaseUrl'
 import { getCuratedExpandedMealsByType } from '../data/curatedMealCatalog'
 import { createDietApiClient } from './dietApi/client'
+import { startApiRequest } from './apiActivity'
 import {
   type ApiResponse,
   type ApiSession,
@@ -25,6 +26,30 @@ import {
 export type { DietSlot, CombinedSlot, WeekPlan, WeekState, WeekStatePatch } from './dietApi/model'
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
+
+function getDietRequestLabel(path: string, method: HttpMethod): string {
+  if (path.includes('/api/auth/login')) return 'Iniciando sesion...'
+  if (path.includes('/api/auth/register')) return 'Creando cuenta...'
+  if (path.includes('/api/auth/logout')) return 'Cerrando sesion...'
+  if (path.includes('/api/plans/my/generate')) return 'Generando plan de comidas...'
+  if (path.includes('/api/plans/my/alternatives')) return 'Cargando alternativas de comidas...'
+  if (path.includes('/api/plans/my/slot')) return 'Guardando comida seleccionada...'
+  if (path.includes('/api/plans/my/week-state')) return 'Guardando ajustes de la semana...'
+  if (path.includes('/api/plans/my/ingredient')) return 'Guardando reemplazo de ingrediente...'
+  if (path.includes('/api/plans/my/complete')) return 'Guardando avance del dia...'
+  if (path.includes('/api/plans/my/grocery')) return 'Guardando lista del super...'
+  if (path.includes('/api/plans/combined/')) return 'Cargando plan combinado...'
+  if (path.includes('/api/plans/my')) return 'Cargando plan semanal...'
+  if (path.includes('/api/users/me/profile')) return 'Cargando perfil...'
+  if (path.includes('/api/shares/search')) return 'Buscando usuarios para compartir...'
+  if (path.includes('/api/shares/invites') && method === 'POST') return 'Enviando invitacion...'
+  if (path.includes('/api/shares/invites') && path.includes('/accept')) return 'Aceptando invitacion...'
+  if (path.includes('/api/shares/invites') && path.includes('/reject')) return 'Rechazando invitacion...'
+  if (path.includes('/api/shares') && method === 'DELETE') return 'Quitando acceso compartido...'
+  if (path.includes('/api/shares') && method === 'PUT') return 'Actualizando permisos compartidos...'
+  if (path.includes('/api/shares')) return 'Sincronizando compartidos...'
+  return method === 'GET' ? 'Cargando datos...' : 'Guardando cambios...'
+}
 
 export function useDietApi() {
   const [actionCounts, setActionCounts] = useState({
@@ -60,6 +85,8 @@ export function useDietApi() {
     body?: unknown,
     tokenOverride?: string
   ): Promise<T> => {
+    const endRequest = startApiRequest(getDietRequestLabel(path, method))
+
     const token = tokenOverride || session?.accessToken
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -69,19 +96,23 @@ export function useDietApi() {
       headers.Authorization = `Bearer ${token}`
     }
 
-    const response = await fetch(`${baseUrl}${path}`, {
-      method,
-      headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
-    })
+    try {
+      const response = await fetch(`${baseUrl}${path}`, {
+        method,
+        headers,
+        body: body === undefined ? undefined : JSON.stringify(body),
+      })
 
-    const payload = (await response.json()) as ApiResponse<T>
+      const payload = (await response.json()) as ApiResponse<T>
 
-    if (!response.ok || !payload.ok || payload.data === undefined) {
-      throw new Error(payload.error || 'Request failed')
+      if (!response.ok || !payload.ok || payload.data === undefined) {
+        throw new Error(payload.error || 'Request failed')
+      }
+
+      return payload.data
+    } finally {
+      endRequest()
     }
-
-    return payload.data
   }, [baseUrl, session?.accessToken])
 
   const api = useMemo(() => createDietApiClient(request), [request])
@@ -406,6 +437,12 @@ export function useDietApi() {
     applyPlanPayload(data)
   }, [api, applyPlanPayload])
 
+  const setSlotMeal = useCallback(async (slotId: string, meal: Comida, week?: string) => {
+    const data = await api.setSlotMeal(slotId, meal, week || plan?.week)
+    applyPlanPayload(data)
+    return true
+  }, [api, applyPlanPayload, plan?.week])
+
   const replaceIngredient = useCallback(async (slotId: string, ingredientIndex: number, nextIngredientId: string, week?: string) => {
     const data = await api.replaceIngredient(slotId, ingredientIndex, nextIngredientId, week)
 
@@ -473,6 +510,7 @@ export function useDietApi() {
 
   const planActions = useMemo(() => ({
     swapMeal,
+    setSlotMeal,
     setSlotCompleted,
     replaceIngredient,
     updateGroceryState,
@@ -485,6 +523,7 @@ export function useDietApi() {
     fetchSlotAlternatives,
     generatePlan,
     replaceIngredient,
+    setSlotMeal,
     setSlotCompleted,
     swapMeal,
     syncWeekState,

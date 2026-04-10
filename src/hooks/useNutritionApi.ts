@@ -1,7 +1,18 @@
 import { useCallback, useMemo, useState } from 'react'
 import { getApiBaseUrl } from '../utils/apiBaseUrl'
+import { startApiRequest } from './apiActivity'
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
+
+function getNutritionRequestLabel(path: string, method: HttpMethod): string {
+  if (path.includes('/api/nutrition/summary')) return 'Cargando resumen nutricional...'
+  if (path.includes('/api/nutrition/profile')) return 'Guardando perfil nutricional...'
+  if (path.includes('/api/nutrition/plans') && method === 'POST') return 'Guardando plan nutricional...'
+  if (path.includes('/api/nutrition/plans')) return 'Cargando planes nutricionales...'
+  if (path.includes('/api/nutrition/progress')) return 'Guardando progreso nutricional...'
+  if (path.includes('/api/nutrition/calculate-plan')) return 'Calculando plan nutricional...'
+  return method === 'GET' ? 'Cargando datos de nutricion...' : 'Guardando datos de nutricion...'
+}
 
 interface ApiResponse<T> {
   ok: boolean
@@ -172,22 +183,28 @@ export function useNutritionApi(accessToken?: string) {
   const request = useCallback(async <T,>(path: string, method: HttpMethod, body?: unknown): Promise<T> => {
     if (!accessToken) throw new Error('No authenticated session')
 
-    const response = await fetch(`${baseUrl}${path}`, {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    })
+    const endRequest = startApiRequest(getNutritionRequestLabel(path, method))
 
-    const payload = (await response.json()) as ApiResponse<T>
+    try {
+      const response = await fetch(`${baseUrl}${path}`, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      })
 
-    if (!response.ok || !payload.ok || payload.data === undefined) {
-      throw new Error(payload.error || 'Nutrition request failed')
+      const payload = (await response.json()) as ApiResponse<T>
+
+      if (!response.ok || !payload.ok || payload.data === undefined) {
+        throw new Error(payload.error || 'Nutrition request failed')
+      }
+
+      return payload.data
+    } finally {
+      endRequest()
     }
-
-    return payload.data
   }, [accessToken, baseUrl])
 
   const withLoading = useCallback(async <T,>(

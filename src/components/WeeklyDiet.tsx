@@ -57,6 +57,7 @@ interface WeeklyDietProps {
   canEditRelationship?: boolean
   onSwapMeal: (slotId: string, tipo: TipoComida, currentMealId: string) => Promise<void>
   onSetSlotCompleted: (slotId: string, completed: boolean) => Promise<void>
+  onSetSlotMeal?: (slotId: string, meal: Comida) => Promise<boolean>
   onReplaceIngredient: (slotId: string, ingredientIndex: number, nextIngredientId: string) => Promise<void>
   onLoadSlotAlternatives?: (slotId: string, currentMealId: string | null) => Promise<Comida[]>
   onRefreshPlan?: () => Promise<unknown>
@@ -160,6 +161,7 @@ export function WeeklyDiet({
   canEditRelationship,
   onSwapMeal,
   onSetSlotCompleted,
+  onSetSlotMeal,
   onReplaceIngredient,
   onLoadSlotAlternatives,
   onRefreshPlan,
@@ -672,6 +674,29 @@ export function WeeklyDiet({
 
     setSavedMealOverrides(nextOverrides)
     setSlotSaveState([slotId], 'saving')
+    if (onSetSlotMeal) {
+      void Promise.resolve(onSetSlotMeal(slotId, override)).then(async (saved) => {
+        if (saved) {
+          if (onRefreshPlan) {
+            await onRefreshPlan()
+          }
+          showSaveFeedback('Alternativa guardada en backend')
+          setSlotSaveState([slotId], 'saved', 1600)
+        } else {
+          setSavedMealOverrides((prev) => {
+            const rollback = { ...prev }
+            if (previousOverride) rollback[slotId] = previousOverride
+            else delete rollback[slotId]
+            return rollback
+          })
+          showSaveError('No se pudo guardar la alternativa en backend')
+          setSlotSaveState([slotId], 'error', 2400)
+        }
+      })
+      triggerHaptic('light')
+      return
+    }
+
     void Promise.resolve(onSyncWeekState?.({ mealOverrides: nextOverrides })).then(async (saved) => {
       if (saved) {
         if (onRefreshPlan) {
@@ -691,7 +716,7 @@ export function WeeklyDiet({
       }
     })
     triggerHaptic('light')
-  }, [onRefreshPlan, onSyncWeekState, savedMealOverrides, setSlotSaveState, showSaveError, showSaveFeedback])
+  }, [onRefreshPlan, onSetSlotMeal, onSyncWeekState, savedMealOverrides, setSlotSaveState, showSaveError, showSaveFeedback])
 
   const clearSavedMealOverride = useCallback((slotId: string) => {
     const previousOverride = savedMealOverrides[slotId]
@@ -700,6 +725,32 @@ export function WeeklyDiet({
 
     setSavedMealOverrides(nextOverrides)
     setSlotSaveState([slotId], 'saving')
+    const slotBaseMeal = slots.find((slot) => slot.slot === slotId)?.meal || null
+
+    if (onSetSlotMeal && slotBaseMeal) {
+      void Promise.resolve(onSetSlotMeal(slotId, slotBaseMeal)).then(async (saved) => {
+        if (saved) {
+          if (onRefreshPlan) {
+            await onRefreshPlan()
+          }
+          showSaveFeedback('Comida restaurada y confirmada en backend')
+          setSlotSaveState([slotId], 'saved', 1600)
+        } else {
+          setSavedMealOverrides((prev) => {
+            if (!previousOverride) return prev
+            return {
+              ...prev,
+              [slotId]: previousOverride,
+            }
+          })
+          showSaveError('No se pudo restaurar la comida en backend')
+          setSlotSaveState([slotId], 'error', 2400)
+        }
+      })
+      triggerHaptic('light')
+      return
+    }
+
     void Promise.resolve(onSyncWeekState?.({ mealOverrides: nextOverrides })).then(async (saved) => {
       if (saved) {
         if (onRefreshPlan) {
@@ -720,7 +771,7 @@ export function WeeklyDiet({
       }
     })
     triggerHaptic('light')
-  }, [onRefreshPlan, onSyncWeekState, savedMealOverrides, setSlotSaveState, showSaveError, showSaveFeedback])
+  }, [onRefreshPlan, onSetSlotMeal, onSyncWeekState, savedMealOverrides, setSlotSaveState, showSaveError, showSaveFeedback, slots])
 
   const loadSlotAlternatives = async (slotId: string, currentMealId: string | null) => {
     if (!onLoadSlotAlternatives) return
