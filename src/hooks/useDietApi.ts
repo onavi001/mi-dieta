@@ -27,6 +27,18 @@ export type { DietSlot, CombinedSlot, WeekPlan, WeekState, WeekStatePatch } from
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
 
 export function useDietApi() {
+  const [actionCounts, setActionCounts] = useState({
+    searchShareCandidates: 0,
+    sendShareInvite: 0,
+    acceptInvite: 0,
+    rejectInvite: 0,
+    updateSharePermission: 0,
+    deleteShare: 0,
+    loadCombinedPlan: 0,
+    logout: 0,
+    generatePlan: 0,
+    updateGroceryState: 0,
+  })
   const [session, setSession] = useState<ApiSession | null>(() => readStoredSession())
   const [profile, setProfile] = useState<AuthProfile | null>(null)
   const [plan, setPlan] = useState<WeekPlan | null>(null)
@@ -94,6 +106,25 @@ export function useDietApi() {
     }
   }, [])
 
+  const runWithAction = useCallback(async <T,>(
+    key: keyof typeof actionCounts,
+    action: () => Promise<T>
+  ): Promise<T> => {
+    setActionCounts((prev) => ({
+      ...prev,
+      [key]: prev[key] + 1,
+    }))
+
+    try {
+      return await action()
+    } finally {
+      setActionCounts((prev) => ({
+        ...prev,
+        [key]: Math.max(0, prev[key] - 1),
+      }))
+    }
+  }, [])
+
   const applyAuthSession = useCallback((data: AuthPayload) => {
     if (!data.session?.access_token) {
       return false
@@ -135,10 +166,12 @@ export function useDietApi() {
   }, [api, applyPlanPayload])
 
   const generatePlan = useCallback(async () => {
-    const data = await api.generatePlan()
-    applyPlanPayload(data)
-    return normalizePlan(data.plan)
-  }, [api, applyPlanPayload])
+    return runWithAction('generatePlan', async () => {
+      const data = await api.generatePlan()
+      applyPlanPayload(data)
+      return normalizePlan(data.plan)
+    })
+  }, [api, applyPlanPayload, runWithAction])
 
   const fetchSlotAlternatives = useCallback(async (slotId: string, currentMealId: string | null): Promise<Comida[]> => {
     const buildLocalFallback = (): Comida[] => {
@@ -188,9 +221,12 @@ export function useDietApi() {
       return
     }
 
-    const data = await api.searchShareCandidates(q)
-    setShareCandidates(data.users || [])
-  }, [api])
+    await runWithAction('searchShareCandidates', async () => {
+      const data = await api.searchShareCandidates(q)
+      setShareCandidates(data.users || [])
+      return data
+    })
+  }, [api, runWithAction])
 
   const loadInvites = useCallback(async () => {
     const [incoming, outgoing] = await Promise.all([
@@ -207,36 +243,49 @@ export function useDietApi() {
   }, [loadInvites, loadShareUsers])
 
   const sendShareInvite = useCallback(async (targetUserId: string, canEdit: boolean) => {
-    await api.sendShareInvite(targetUserId, canEdit)
-
-    await refreshShareState()
-  }, [api, refreshShareState])
+    await runWithAction('sendShareInvite', async () => {
+      await api.sendShareInvite(targetUserId, canEdit)
+      await refreshShareState()
+      return true
+    })
+  }, [api, refreshShareState, runWithAction])
 
   const acceptInvite = useCallback(async (inviteId: string) => {
-    await api.acceptInvite(inviteId)
-    await refreshShareState()
-  }, [api, refreshShareState])
+    await runWithAction('acceptInvite', async () => {
+      await api.acceptInvite(inviteId)
+      await refreshShareState()
+      return true
+    })
+  }, [api, refreshShareState, runWithAction])
 
   const rejectInvite = useCallback(async (inviteId: string) => {
-    await api.rejectInvite(inviteId)
-    await loadInvites()
-  }, [api, loadInvites])
+    await runWithAction('rejectInvite', async () => {
+      await api.rejectInvite(inviteId)
+      await loadInvites()
+      return true
+    })
+  }, [api, loadInvites, runWithAction])
 
   const updateSharePermission = useCallback(async (sharedWithUserId: string, canEdit: boolean) => {
-    await api.updateSharePermission(sharedWithUserId, canEdit)
-
-    await loadShareUsers()
-  }, [api, loadShareUsers])
+    await runWithAction('updateSharePermission', async () => {
+      await api.updateSharePermission(sharedWithUserId, canEdit)
+      await loadShareUsers()
+      return true
+    })
+  }, [api, loadShareUsers, runWithAction])
 
   const deleteShare = useCallback(async (sharedWithUserId: string) => {
-    await api.deleteShare(sharedWithUserId)
+    await runWithAction('deleteShare', async () => {
+      await api.deleteShare(sharedWithUserId)
 
-    if (selectedShareUserId === sharedWithUserId) {
-      setSelectedShareUserId('')
-    }
+      if (selectedShareUserId === sharedWithUserId) {
+        setSelectedShareUserId('')
+      }
 
-    await loadShareUsers()
-  }, [api, loadShareUsers, selectedShareUserId])
+      await loadShareUsers()
+      return true
+    })
+  }, [api, loadShareUsers, runWithAction, selectedShareUserId])
 
   const loadProfile = useCallback(async () => {
     const data = await api.loadProfile()
@@ -249,39 +298,42 @@ export function useDietApi() {
       return
     }
 
-    const data = await api.loadCombinedPlan(selectedShareUserId)
-    const normalized = Array.isArray(data.combinedSlots)
-      ? data.combinedSlots.map((slot) => {
-        const row = slot as RawCombinedSlot
-        const users: CombinedSlot['users'] = {}
-        const sourceUsers = row.users || {}
+    await runWithAction('loadCombinedPlan', async () => {
+      const data = await api.loadCombinedPlan(selectedShareUserId)
+      const normalized = Array.isArray(data.combinedSlots)
+        ? data.combinedSlots.map((slot) => {
+          const row = slot as RawCombinedSlot
+          const users: CombinedSlot['users'] = {}
+          const sourceUsers = row.users || {}
 
-        Object.keys(sourceUsers).forEach((userId) => {
-          const rawMealId = sourceUsers[userId]?.mealId
-          users[userId] = {
-            mealId:
-              typeof rawMealId === 'string'
-                ? rawMealId
-                : typeof rawMealId === 'number'
-                  ? String(rawMealId)
-                  : null,
-            meal: normalizeMeal(sourceUsers[userId]?.meal),
-            completed: Boolean(sourceUsers[userId]?.completed),
+          Object.keys(sourceUsers).forEach((userId) => {
+            const rawMealId = sourceUsers[userId]?.mealId
+            users[userId] = {
+              mealId:
+                typeof rawMealId === 'string'
+                  ? rawMealId
+                  : typeof rawMealId === 'number'
+                    ? String(rawMealId)
+                    : null,
+              meal: normalizeMeal(sourceUsers[userId]?.meal),
+              completed: Boolean(sourceUsers[userId]?.completed),
+            }
+          })
+
+          return {
+            slot: String(row.slot),
+            day: String(row.day),
+            tipo: row.tipo as TipoComida,
+            hour: String(row.hour),
+            users,
           }
         })
+        : []
 
-        return {
-          slot: String(row.slot),
-          day: String(row.day),
-          tipo: row.tipo as TipoComida,
-          hour: String(row.hour),
-          users,
-        }
-      })
-      : []
-
-    setCombinedSlots(normalized)
-  }, [api, selectedShareUserId, viewMode])
+      setCombinedSlots(normalized)
+      return normalized
+    })
+  }, [api, runWithAction, selectedShareUserId, viewMode])
 
   const bootstrap = useCallback(async () => {
     if (!session?.accessToken) {
@@ -326,16 +378,20 @@ export function useDietApi() {
   }, [api, applyAuthSession, runWithLoading])
 
   const logout = useCallback(async () => {
-    try {
-      if (session?.accessToken) {
-        await api.logout()
+    await runWithAction('logout', async () => {
+      try {
+        if (session?.accessToken) {
+          await api.logout()
+        }
+      } catch {
+        // Ignore logout API failures and clear local session anyway.
+      } finally {
+        clearSessionState()
       }
-    } catch {
-      // Ignore logout API failures and clear local session anyway.
-    } finally {
-      clearSessionState()
-    }
-  }, [api, clearSessionState, session?.accessToken])
+
+      return true
+    })
+  }, [api, clearSessionState, runWithAction, session?.accessToken])
 
   const swapMeal = useCallback(async (slotId: string, tipo: TipoComida, currentMealId: string) => {
     void slotId
@@ -357,21 +413,31 @@ export function useDietApi() {
   }, [api, applyPlanPayload])
 
   const updateGroceryState = useCallback(async (nextState: { checked: string[]; onlyPending: boolean }) => {
-    const data = await api.updateGroceryState(nextState)
-
-    applyPlanPayload(data)
-  }, [api, applyPlanPayload])
+    await runWithAction('updateGroceryState', async () => {
+      const data = await api.updateGroceryState(nextState)
+      applyPlanPayload(data)
+      return true
+    })
+  }, [api, applyPlanPayload, runWithAction])
 
   const syncWeekState = useCallback(async (patch: WeekStatePatch) => {
     try {
-      const data = await api.updateWeekState(patch)
+      const payload: WeekStatePatch = patch.week
+        ? patch
+        : {
+          ...patch,
+          week: plan?.week,
+        }
+
+      const data = await api.updateWeekState(payload)
       applyPlanPayload(data)
       return true
-    } catch {
-      // Sync failures are non-critical; local state is the source of truth until next load.
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No se pudo guardar la semana en el backend'
+      setError(message)
       return false
     }
-  }, [api, applyPlanPayload])
+  }, [api, applyPlanPayload, plan?.week])
 
   const activeSlots = useMemo(() => {
     if (viewMode !== 'combined') {
@@ -428,6 +494,18 @@ export function useDietApi() {
   return {
     loading,
     error,
+    actionLoading: {
+      searchShareCandidates: actionCounts.searchShareCandidates > 0,
+      sendShareInvite: actionCounts.sendShareInvite > 0,
+      acceptInvite: actionCounts.acceptInvite > 0,
+      rejectInvite: actionCounts.rejectInvite > 0,
+      updateSharePermission: actionCounts.updateSharePermission > 0,
+      deleteShare: actionCounts.deleteShare > 0,
+      loadCombinedPlan: actionCounts.loadCombinedPlan > 0,
+      logout: actionCounts.logout > 0,
+      generatePlan: actionCounts.generatePlan > 0,
+      updateGroceryState: actionCounts.updateGroceryState > 0,
+    },
     session,
     profile,
     plan,

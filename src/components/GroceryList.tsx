@@ -22,9 +22,10 @@ interface GroceryListProps {
   weekState?: WeekState | null
   onChangeGroceryState: (nextState: { checked: string[]; onlyPending: boolean }) => Promise<void>
   onSyncWeekState?: (patch: WeekStatePatch) => Promise<boolean>
+  isSavingState?: boolean
 }
 
-export function GroceryList({ accessToken, meals, groceryState, weekState, onChangeGroceryState, onSyncWeekState }: GroceryListProps) {
+export function GroceryList({ accessToken, meals, groceryState, weekState, onChangeGroceryState, onSyncWeekState, isSavingState = false }: GroceryListProps) {
   const { adjustments, getAdjustment, updateAdjustment, removeAdjustment, clearAllAdjustments, restoreAdjustments } = useGroceryAdjustments(
     (next) => void Promise.resolve(onSyncWeekState?.({ groceryAdjustments: next })).then((saved) => {
       if (saved) {
@@ -51,6 +52,7 @@ export function GroceryList({ accessToken, meals, groceryState, weekState, onCha
   const [saveFeedback, setSaveFeedback] = useState('')
   const [saveError, setSaveError] = useState('')
   const [isGeneratingList, setIsGeneratingList] = useState(false)
+  const [isPersistingState, setIsPersistingState] = useState(false)
   const saveFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -102,12 +104,21 @@ export function GroceryList({ accessToken, meals, groceryState, weekState, onCha
   const checked = groceryState.checked
   const onlyPending = groceryState.onlyPending
 
+  const persistGroceryState = async (nextState: { checked: string[]; onlyPending: boolean }) => {
+    setIsPersistingState(true)
+    try {
+      await onChangeGroceryState(nextState)
+    } finally {
+      setIsPersistingState(false)
+    }
+  }
+
   const toggleItem = (id: string) => {
     const nextChecked = checked.includes(id)
       ? checked.filter((item) => item !== id)
       : [...checked, id]
 
-    void onChangeGroceryState({
+    void persistGroceryState({
       ...groceryState,
       checked: nextChecked,
     })
@@ -117,7 +128,7 @@ export function GroceryList({ accessToken, meals, groceryState, weekState, onCha
 
   const clearChecked = () => {
     if (confirm('¿Borrar todas las marcas de la lista del súper?')) {
-      void onChangeGroceryState({
+      void persistGroceryState({
         ...groceryState,
         checked: [],
       })
@@ -192,7 +203,7 @@ export function GroceryList({ accessToken, meals, groceryState, weekState, onCha
     setIsGeneratingList(true)
     try {
       clearAllAdjustments()
-      await onChangeGroceryState({
+      await persistGroceryState({
         ...groceryState,
         checked: [],
       })
@@ -228,6 +239,12 @@ export function GroceryList({ accessToken, meals, groceryState, weekState, onCha
         </div>
       </div>
 
+      {(isPersistingState || isSavingState) && (
+        <div className="mb-4 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs font-semibold text-sky-800">
+          Guardando cambios de la lista...
+        </div>
+      )}
+
       {filteredSomeIngredient && (
         <div className="mb-6 rounded-2xl border border-sky-200 bg-sky-50 p-4">
           <p className="text-sm font-semibold text-sky-900">Lista filtrada por perfil nutricional</p>
@@ -235,7 +252,7 @@ export function GroceryList({ accessToken, meals, groceryState, weekState, onCha
             Se ocultaron {filteredSummary.removedCount} ingrediente(s) por tu perfil.
           </p>
           {filteredSummary.restrictionLabels.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
+            <div className="mt-3 flex flex-wrap gap-1.5">
               {filteredSummary.restrictionLabels.map((label) => (
                 <span key={label} className="rounded-full border border-sky-200 bg-white px-2 py-1 text-[10px] font-semibold text-sky-700">
                   {label}

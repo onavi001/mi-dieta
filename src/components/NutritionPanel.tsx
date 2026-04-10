@@ -601,6 +601,7 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
   } = useNutritionApi(accessToken)
 
   const [message, setMessage] = useState('')
+  const [isGeneratingWeek, setIsGeneratingWeek] = useState(false)
   const [formMode, setFormMode] = useState<FormMode>('basico')
 
   const [collapsed, setCollapsed] = useState<CollapsibleState>({
@@ -678,6 +679,17 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
     energyScore: '',
     weeklyNotes: '',
   })
+
+  const runWeeklyGeneration = async () => {
+    if (!onPlanSaved) return false
+
+    setIsGeneratingWeek(true)
+    try {
+      return await onPlanSaved()
+    } finally {
+      setIsGeneratingWeek(false)
+    }
+  }
 
   useEffect(() => {
     if (!accessToken) return
@@ -894,7 +906,7 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
     const saved = await createPlanVersion(payload)
     if (saved) {
       setMessage(`Plan v${saved.version_number} guardado y activado. Generando comidas de la semana...`)
-      const generated = await onPlanSaved?.()
+      const generated = await runWeeklyGeneration()
       if (generated) {
         setMessage(`Plan v${saved.version_number} guardado, activado y semana generada.`)
       } else {
@@ -1015,7 +1027,7 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
     const saved = await createPlanVersion(payload)
     if (saved) {
       setMessage(`Plan sugerido guardado y activado (v${saved.version_number}). Generando comidas de la semana...`)
-      const generated = await onPlanSaved?.()
+      const generated = await runWeeklyGeneration()
       if (generated) {
         setMessage(`Plan sugerido guardado y activado (v${saved.version_number}). La semana ya fue generada.`)
       } else {
@@ -1120,10 +1132,10 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
         </div>
         {error && <p className="text-[10px] text-red-600 mt-2">⚠️ {error}</p>}
         {message && <p className="text-[10px] text-emerald-700 mt-2">✓ {message}</p>}
-        {(loading || saving) && (
+        {(loading || saving || isGeneratingWeek) && (
           <div className="flex items-center gap-2 mt-2 text-[10px] text-gray-600">
             <LoadingSpinner />
-            <span>Sincronizando...</span>
+            <span>{isGeneratingWeek ? 'Generando la semana...' : 'Sincronizando...'}</span>
           </div>
         )}
       </div>
@@ -1220,11 +1232,11 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
           )}
 
           <div className="flex gap-2">
-            <button type="submit" disabled={saving} className="flex-1 bg-emerald-600 text-white rounded-xl py-2 text-xs font-semibold disabled:opacity-50">
-              {saving ? (
+            <button type="submit" disabled={saving || isGeneratingWeek} className="flex-1 bg-emerald-600 text-white rounded-xl py-2 text-xs font-semibold disabled:opacity-50">
+              {saving || isGeneratingWeek ? (
                 <div className="flex items-center justify-center gap-2">
                   <LoadingSpinner />
-                  <span>Guardando...</span>
+                  <span>{isGeneratingWeek ? 'Generando semana...' : 'Guardando...'}</span>
                 </div>
               ) : (
                 'Guardar perfil'
@@ -1253,18 +1265,18 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
             <button
               type="button"
               onClick={() => void suggestInitialPlan()}
-              disabled={saving}
+              disabled={saving || isGeneratingWeek}
               className="w-full bg-amber-100 text-amber-900 rounded-xl py-2 text-xs font-semibold disabled:opacity-50"
             >
-              {saving ? <LoadingSpinner /> : '💡 Sugerir plan inicial'}
+              {saving || isGeneratingWeek ? <LoadingSpinner /> : '💡 Sugerir plan inicial'}
             </button>
             <button
               type="button"
               onClick={() => void suggestInitialPlan({ autoSave: true })}
-              disabled={saving}
+              disabled={saving || isGeneratingWeek}
               className="w-full bg-emerald-100 text-emerald-900 rounded-xl py-2 text-xs font-semibold disabled:opacity-50"
             >
-              {saving ? <LoadingSpinner /> : '✅ Sugerir y guardar'}
+              {saving || isGeneratingWeek ? <LoadingSpinner /> : '✅ Sugerir y guardar'}
             </button>
           </div>
 
@@ -1353,11 +1365,11 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
             />
           )}
 
-          <button type="submit" disabled={saving} className="w-full bg-emerald-600 text-white rounded-xl py-2 text-xs font-semibold disabled:opacity-50">
-            {saving ? (
+          <button type="submit" disabled={saving || isGeneratingWeek} className="w-full bg-emerald-600 text-white rounded-xl py-2 text-xs font-semibold disabled:opacity-50">
+            {saving || isGeneratingWeek ? (
               <div className="flex items-center justify-center gap-2">
                 <LoadingSpinner />
-                <span>Guardando...</span>
+                <span>{isGeneratingWeek ? 'Generando semana...' : 'Guardando...'}</span>
               </div>
             ) : (
               'Guardar plan'
@@ -1420,11 +1432,11 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
             placeholder="Resumen de adherencia, antojos o dificultades"
           />
 
-          <button type="submit" disabled={saving} className="w-full bg-emerald-600 text-white rounded-xl py-2 text-xs font-semibold disabled:opacity-50">
-            {saving ? (
+          <button type="submit" disabled={saving || isGeneratingWeek} className="w-full bg-emerald-600 text-white rounded-xl py-2 text-xs font-semibold disabled:opacity-50">
+            {saving || isGeneratingWeek ? (
               <div className="flex items-center justify-center gap-2">
                 <LoadingSpinner />
-                <span>Guardando...</span>
+                <span>{isGeneratingWeek ? 'Generando semana...' : 'Guardando...'}</span>
               </div>
             ) : (
               'Guardar seguimiento'
