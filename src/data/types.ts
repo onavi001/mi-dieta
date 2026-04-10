@@ -1,5 +1,6 @@
-export type Persona = 'ambos' | 'ivan' | 'paulina'
-export type Tab = 'dieta' | 'super'
+import type { PlanGroupKey } from './ingredientReference'
+
+export type Tab = 'dieta' | 'super' | 'nutricion'
 
 export type TipoComida =
   | 'Desayuno'
@@ -11,9 +12,19 @@ export type TipoComida =
 export interface MealIngredient {
   id: string
   presentacion: string
-  cantidadIvan: number
-  cantidadPaulina: number
+  cantidad: number
   unidad: string
+}
+
+export type MealGroupPortions = Partial<Record<PlanGroupKey, number>>
+
+export interface RealDishMetadata {
+  source?: 'curated' | 'generated' | 'legacy'
+  cuisineTags?: string[]
+  searchKeywords?: string[]
+  prepTimeMinutes?: number
+  difficulty?: 'easy' | 'medium' | 'advanced'
+  servingNote?: string
 }
 
 export interface Comida {
@@ -25,16 +36,8 @@ export interface Comida {
   tags: string[]
   forbiddenIngredients: string[]
   ingredientes: MealIngredient[]
-}
-
-export interface ComidaLegacy {
-  day: string
-  tipo: TipoComida
-  nombre: string
-  ivan: string
-  paulina: string
-  receta: string
-  tip: string
+  groupPortions?: MealGroupPortions
+  realDishMetadata?: RealDishMetadata
 }
 
 export interface ProductoSuper {

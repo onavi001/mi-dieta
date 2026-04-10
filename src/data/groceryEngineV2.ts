@@ -1,5 +1,6 @@
-import { buildWeeklyMeals } from './mealEngine'
-import type { CategoriaSuper, MealIngredient, ProductoSuper } from './types'
+import type { CategoriaSuper, Comida, MealIngredient, ProductoSuper } from './types'
+import { detectIngredientGroup } from './ingredientConversionUtils'
+import { normalizeIngredientText, type PlanGroupKey } from './ingredientReference'
 
 interface IngredientMap {
   displayName: string
@@ -7,8 +8,18 @@ interface IngredientMap {
   note: string
 }
 
-// Mapeo de IDs de ingredientes (como están en meal-database.json) a información de display
-const INGREDIENT_MAPPING: Record<string, IngredientMap> = {
+const GROUP_TO_CATEGORY: Record<PlanGroupKey, string> = {
+  proteina_animal_o_alternativas: 'Proteínas',
+  verduras: 'Verduras',
+  frutas: 'Frutas',
+  cereales_tuberculos: 'Granos',
+  leguminosas: 'Leguminosas',
+  lacteos_o_sustitutos: 'Lácteos y sustitutos',
+  grasas_saludables: 'Grasas y condimentos',
+}
+
+// Mapeo de IDs de ingredientes a información de display (usados por la API backend)
+const RAW_INGREDIENT_MAPPING: Record<string, IngredientMap> = {
   'pollo': { displayName: 'Pollo', category: 'Proteínas', note: 'Elegir corte según presentación' },
   'res': { displayName: 'Carne de res', category: 'Proteínas', note: 'Corte magro' },
   'pavo': { displayName: 'Pavo', category: 'Proteínas', note: 'Más magro que pollo' },
@@ -56,6 +67,10 @@ const INGREDIENT_MAPPING: Record<string, IngredientMap> = {
   'chipotle': { displayName: 'Chiles chipotles en adobo', category: 'Otros', note: 'Uso suave por reflujo' },
 }
 
+const INGREDIENT_MAPPING: Record<string, IngredientMap> = Object.fromEntries(
+  Object.entries(RAW_INGREDIENT_MAPPING).map(([key, value]) => [normalizeIngredientText(key), value])
+)
+
 interface AggregatedIngredient {
   key: string
   displayName: string
@@ -73,56 +88,54 @@ function formatDisplayName(baseName: string, presentacion?: string): string {
   return `${baseName} (${presentacion.trim()})`
 }
 
-export function generateGroceryListFromDb(
-  selectedMealsBySlot: Record<string, string>
-): CategoriaSuper[] {
-  // Aggregated map: { ingredientId: { qty: sum, unit: '...', category: '...', ... } }
-  const aggregatedMap = new Map<string, AggregatedIngredient>()
-  const weeklyMeals = buildWeeklyMeals(selectedMealsBySlot)
+function prettifyIngredientName(ingredientId: string): string {
+  return ingredientId
+    .split(' ')
+    .filter(Boolean)
+    .map((chunk) => chunk.charAt(0).toUpperCase() + chunk.slice(1))
+    .join(' ')
+}
 
-  // Iterate through weekly plan meals (selected or default)
-  for (const meal of weeklyMeals) {
-    // Sum quantities from ingredientes array
+function resolveIngredientCategory(normalizedId: string, ingredientText: string): string {
+  const group = detectIngredientGroup(normalizedId, ingredientText)
+  return group ? GROUP_TO_CATEGORY[group] : 'Otros'
+}
+
+export function generateGroceryListFromMeals(meals: Comida[]): CategoriaSuper[] {
+  const aggregatedMap = new Map<string, AggregatedIngredient>()
+
+  for (const meal of meals) {
     for (const ing of meal.ingredientes as MealIngredient[]) {
       const ingredientId = ing.id
-      const mapping = INGREDIENT_MAPPING[ingredientId]
+      const normalizedId = normalizeIngredientText(ingredientId)
+      const mapping = INGREDIENT_MAPPING[normalizedId]
       const presentacion = ing.presentacion?.trim() || ''
-      const aggregateKey = `${ingredientId}::${presentacion}`
-      
-      if (!mapping) {
-        console.warn(`Ingrediente no mapeado: ${ingredientId}`)
-        continue
-      }
-
-      // Total quantity = Ivan's quantity + Paulina's quantity
-      const totalQty = ing.cantidadIvan + ing.cantidadPaulina
       const unit = ing.unidad
+      const aggregateKey = `${normalizedId}::${presentacion}::${unit}`
+
+      const fallbackDisplayName = prettifyIngredientName(ingredientId)
+      const displayName = mapping?.displayName || fallbackDisplayName
+      const category = mapping?.category || resolveIngredientCategory(normalizedId, `${ingredientId} ${presentacion}`)
+      const note = mapping?.note || ''
+
+      const totalQty = typeof ing.cantidad === 'number' ? ing.cantidad : 0
 
       if (aggregatedMap.has(aggregateKey)) {
         const existing = aggregatedMap.get(aggregateKey)!
-        
-        // Si unidades coinciden, sumar directamente
-        if (existing.unit === unit) {
-          existing.totalQuantity += totalQty
-        } else {
-          // Si unidades no coinciden, crear entrada aparte (esto no debería pasar normalmente)
-          console.warn(`Unidades inconsistentes para ${ingredientId}: ${existing.unit} vs ${unit}`)
-          existing.totalQuantity += totalQty
-        }
+        existing.totalQuantity += totalQty
       } else {
         aggregatedMap.set(aggregateKey, {
           key: aggregateKey,
-          displayName: formatDisplayName(mapping.displayName, presentacion),
-          category: mapping.category,
+          displayName: formatDisplayName(displayName, presentacion),
+          category,
           totalQuantity: totalQty,
           unit,
-          note: mapping.note,
+          note,
         })
       }
     }
   }
 
-  // Group by category
   const categoriesMap = new Map<string, ProductoSuper[]>()
 
   aggregatedMap.forEach((ingredient) => {
@@ -132,9 +145,8 @@ export function generateGroceryListFromDb(
       categoriesMap.set(category, [])
     }
 
-    const qty = unit === 'piezas' 
-      ? `${Math.round(totalQuantity * 10) / 10} ${unit}`
-      : `${Math.round(totalQuantity)}${unit}`
+    const rounded = Math.round(totalQuantity * 10) / 10
+    const qty = unit === 'piezas' ? `${rounded} ${unit}` : `${rounded}${unit}`
 
     categoriesMap.get(category)!.push({
       name: displayName,
@@ -143,10 +155,10 @@ export function generateGroceryListFromDb(
     })
   })
 
-  // Generar estructura de categorías
   const categories: CategoriaSuper[] = []
   const categoryOrder = [
     'Proteínas',
+    'Lácteos y sustitutos',
     'Leguminosas',
     'Verduras',
     'Frutas',
@@ -167,3 +179,4 @@ export function generateGroceryListFromDb(
 
   return categories
 }
+

@@ -45,7 +45,6 @@ mi-dieta/
 │       └── shared-state.mjs   # Netlify Function: GET/PUT de estado por clave
 ├── public/
 ├── scripts/
-│   ├── validate-meal-database.mjs   # Valida el JSON de comidas antes del build
 │   └── report-bundle.mjs            # Reporte de tamaño del bundle
 ├── src/
 │   ├── App.tsx                      # Root: layout, navegación inferior, selector de persona
@@ -54,17 +53,20 @@ mi-dieta/
 │   │   ├── MealCard.tsx             # Tarjeta individual de comida con gestos
 │   │   └── GroceryList.tsx          # Lista del súper con ajustes y filtros
 │   ├── data/
-│   │   ├── meal-database.json       # Base de datos de comidas (id, ingredientes, receta, tip)
-│   │   ├── mealEngine.ts            # Construye el plan semanal y cicla opciones de intercambio
 │   │   ├── weeklySlots.ts           # Define los 35 slots semanales (7 días × 5 comidas)
-│   │   ├── groceries.ts             # Lista del súper base (legado)
-│   │   ├── groceryEngineV2.ts       # Genera la lista del súper desde el plan activo
+│   │   ├── ingredientReference.ts   # Ingredientes: referencias, conversiones, grupos
+│   │   ├── ingredientConversionUtils.ts # Utilidades compartidas de conversión
+│   │   ├── groceryEngineV2.ts       # Genera la lista del súper desde comidas de la API
 │   │   ├── groceryEngineV2.test.ts  # Tests del motor de lista
-│   │   └── types.ts                 # Tipos compartidos (Comida, Persona, TipoComida, etc.)
+│   │   ├── profesionalNutritionRules.ts # Reglas: distribución de porciones por grupo
+│   │   ├── mealEngine.ts            # Validación y selección de comidas
+│   │   └── types.ts                 # Tipos compartidos (Comida, Persona, TipoComida)
 │   ├── hooks/
-│   │   ├── useLocalStorage.ts       # Estado persistente con sincronización remota
-│   │   ├── useGroceryAdjustments.ts # Ajustes manuales de cantidades del súper
-│   │   └── localStorageMigrations.ts # Migración de datos al evolucionar el schema
+│   │   ├── useDietApi.ts            # Manejo de plan de dieta desde API
+│   │   ├── useNutritionApi.ts       # Manejo de perfil nutricional desde API
+│   │   ├── useLocalStorage.ts       # Estado persistente con sincronización
+│   │   ├── useGroceryAdjustments.ts # Ajustes manuales de cantidades
+│   │   └── localStorageMigrations.ts # Migración de datos al evolucionar schema
 │   └── utils/
 │       └── haptics.ts               # Feedback háptico (navigator.vibrate)
 ├── netlify.toml                     # Redirect /api/state → Netlify Function
@@ -77,15 +79,17 @@ mi-dieta/
 
 ## Cómo funciona el plan de comidas
 
-El archivo `src/data/meal-database.json` contiene todas las comidas disponibles. Cada comida tiene:
+El plan de dieta se **genera dinámicamente en el backend de la API** basándose en el perfil nutricional del usuario (porciones por grupo alimenticio, meta calórica, preferencias).
 
-- `id` — identificador único
+Las comidas se estructuran así:
+
+- `id` — identificador único asignado por el backend
 - `tipo` — `Desayuno | Snack Mañana | Comida | Snack Tarde | Cena`
 - `nombre`, `receta`, `tip` — contenido visible
-- `ingredientes` — lista con cantidades separadas para Ivan y Paulina
-- `tags` y `forbiddenIngredients` — para filtrado y reglas
+- `ingredientes` — lista con cantidades en gramos
+- `forbiddenIngredients` — ingredientes a evitar por el usuario
 
-`mealEngine.ts` asigna automáticamente una comida por defecto a cada uno de los 35 slots semanales. Al intercambiar una comida, `nextMealForSlot` avanza al siguiente ID disponible del mismo tipo, ciclando a través de todas las opciones.
+La frontend obtiene el plan mediante `useDietApi.loadMyPlan()` que trae los slots semanales con sus comidas ya asignadas. Cada slot contiene la comida específica (generada por el backend) con sus ingredientes y cantidades.
 
 ---
 
@@ -151,7 +155,6 @@ npm test           # Corre todos los tests con Vitest
 
 ```bash
 npm run lint                # ESLint
-npm run validate:db         # Solo valida meal-database.json (sin build)
 npm run build:report        # Build + reporte de tamaño del bundle
 ```
 
@@ -205,34 +208,23 @@ Guarda un nuevo valor.
 
 ---
 
-## Añadir o editar comidas
+## Generación de comidas (Backend)
 
-Edita `src/data/meal-database.json`. Cada entrada sigue este schema:
+Las comidas se generan dinámicamente en el backend de la API (`mi-dieta-api`) basándose en:
 
-```jsonc
-{
-  "id": "desayuno-avena-frutas",
-  "tipo": "Desayuno",
-  "nombre": "Avena con frutas",
-  "receta": "Cocinar avena en agua, agregar fruta picada.",
-  "tip": "Evitar cítricos por reflujo.",
-  "tags": ["sin-gluten"],
-  "forbiddenIngredients": [],
-  "ingredientes": [
-    {
-      "id": "avena",
-      "presentacion": "Hojuelas de avena",
-      "cantidadIvan": 80,
-      "cantidadPaulina": 60,
-      "unidad": "g"
-    }
-  ]
-}
-```
+1. **Perfil nutricional del usuario**: Porciones recomendadas por grupo alimenticio
+2. **Meta calórica**: Distribución energética por comida
+3. **Preferencias y restricciones**: Alergias, ingredientes prohibidos, etiquetas de dieta
+4. **Pool de recetas disponibles**: Combinaciones válidas de ingredientes
 
-Antes de hacer build, valida el archivo:
+El backend asigna automáticamente comidas a cada slot semanal considerando:
+- Variedad (no repetir la misma comida en la misma semana)
+- Balance nutricional
+- Disponibilidad de ingredientes
 
-```bash
-npm run validate:db
-```
+Para **modificar la lógica de generación** o agregar nuevas recetas, edita los archivos en `mi-dieta-api/src/`:
+- Controladores de planes: `planController.js`
+- Reglas de generación: archivos en `services/`
+- Recetas base: archivos en `data/recipes/` o base de datos
 
+La frontend consume el plan generado mediante `useDietApi.loadMyPlan()` y permite ajustes manuales si está habilitado el intercambio de comidas.

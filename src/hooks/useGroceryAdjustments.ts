@@ -1,52 +1,43 @@
-import { useLocalStorage } from './useLocalStorage'
+import { useState } from 'react'
 import type { GroceryAdjustment } from '../data/types'
 
 // Hook para gestionar ajustes manuales en la lista de compras
-export function useGroceryAdjustments() {
-  const [adjustments, setAdjustments] = useLocalStorage<GroceryAdjustment[]>(
-    'groceryAdjustments',
-    [],
-    {
-      migrate: (stored) => {
-        if (Array.isArray(stored)) {
-          return stored.filter(
-            (item: unknown) =>
-              typeof item === 'object' &&
-              item !== null &&
-              'productName' in item &&
-              'customQty' in item
-          ) as GroceryAdjustment[]
-        }
-        return []
-      },
-    }
-  )
+export function useGroceryAdjustments(onSync?: (adjustments: GroceryAdjustment[]) => void) {
+  const [adjustments, setAdjustments] = useState<GroceryAdjustment[]>([])
 
-  // Obtener cantidad personalizada de un producto
   const getAdjustment = (productName: string): GroceryAdjustment | undefined => {
     return adjustments.find((adj) => adj.productName === productName)
   }
 
-  // Actualizar cantidad personalizada
   const updateAdjustment = (productName: string, customQty: string, customNote?: string) => {
-    const existing = adjustments.findIndex((adj) => adj.productName === productName)
-    if (existing >= 0) {
-      const updated = [...adjustments]
-      updated[existing] = { productName, customQty, customNote }
-      setAdjustments(updated)
-    } else {
-      setAdjustments([...adjustments, { productName, customQty, customNote }])
-    }
+    setAdjustments((prev) => {
+      const existing = prev.findIndex((adj) => adj.productName === productName)
+      const next = existing >= 0
+        ? prev.map((adj, i) => (i === existing ? { productName, customQty, customNote } : adj))
+        : [...prev, { productName, customQty, customNote }]
+      onSync?.(next)
+      return next
+    })
   }
 
-  // Eliminar ajuste (volver a cantidad original)
   const removeAdjustment = (productName: string) => {
-    setAdjustments(adjustments.filter((adj) => adj.productName !== productName))
+    setAdjustments((prev) => {
+      const next = prev.filter((adj) => adj.productName !== productName)
+      onSync?.(next)
+      return next
+    })
   }
 
-  // Limpiar todos los ajustes
   const clearAllAdjustments = () => {
-    setAdjustments([])
+    setAdjustments((prev) => {
+      void prev
+      onSync?.([])
+      return []
+    })
+  }
+
+  const restoreAdjustments = (next: GroceryAdjustment[]) => {
+    setAdjustments(next)
   }
 
   return {
@@ -55,5 +46,6 @@ export function useGroceryAdjustments() {
     updateAdjustment,
     removeAdjustment,
     clearAllAdjustments,
+    restoreAdjustments,
   }
 }

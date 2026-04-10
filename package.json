@@ -6,8 +6,7 @@
   "scripts": {
     "dev": "vite",
     "host": "vite --host",
-    "validate:db": "node scripts/validate-meal-database.mjs",
-    "build": "npm run validate:db && tsc -b && vite build",
+    "build": "tsc -b && vite build",
     "build:report": "npm run build && node scripts/report-bundle.mjs",
     "test": "vitest run",
     "lint": "eslint .",
