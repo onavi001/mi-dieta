@@ -2,11 +2,6 @@ import { useSyncExternalStore } from 'react'
 
 type Listener = () => void
 
-type ApiActivitySnapshot = {
-  pendingRequests: number
-  currentLabel: string
-}
-
 const DEFAULT_LABEL = 'Procesando solicitud...'
 
 let pendingRequests = 0
@@ -52,19 +47,17 @@ export function getApiPendingRequests(): number {
   return pendingRequests
 }
 
-export function getApiActivitySnapshot(): ApiActivitySnapshot {
-  return {
-    pendingRequests,
-    currentLabel,
-  }
+export function getApiCurrentLabel(): string {
+  return currentLabel
 }
 
 export function useApiActivity() {
-  const snapshot = useSyncExternalStore(subscribeApiActivity, getApiActivitySnapshot)
+  const pending = useSyncExternalStore(subscribeApiActivity, getApiPendingRequests)
+  const label = useSyncExternalStore(subscribeApiActivity, getApiCurrentLabel)
 
   return {
-    pendingRequests: snapshot.pendingRequests,
-    isBusy: snapshot.pendingRequests > 0,
-    currentLabel: snapshot.currentLabel,
+    pendingRequests: pending,
+    isBusy: pending > 0,
+    currentLabel: label,
   }
 }
