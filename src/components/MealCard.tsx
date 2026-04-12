@@ -577,7 +577,7 @@ export function MealCard({
 
       {conversionState && (
         <div
-          className="fixed inset-0 z-50 bg-gray-900/45 backdrop-blur-[1px] flex items-end sm:items-center justify-center px-4"
+          className="fixed inset-0 z-[70] bg-gray-900/45 backdrop-blur-[1px] flex items-end sm:items-center justify-center px-4"
           onClick={(e) => {
             e.stopPropagation()
             setConversionState(null)
@@ -679,7 +679,7 @@ export function MealCard({
 
         return (
           <div
-            className="fixed inset-0 z-50 bg-gray-900/45 backdrop-blur-[1px] flex items-end sm:items-center justify-center px-4"
+            className="fixed inset-0 z-[70] bg-gray-900/45 backdrop-blur-[1px] flex items-end sm:items-center justify-center px-4"
             onClick={(e) => { e.stopPropagation(); setIngredientPopup(null) }}
           >
             <div
@@ -801,7 +801,7 @@ export function MealCard({
 
       {showSuggestedMeals && suggestedMeals.length > 0 && (
         <div
-          className="fixed inset-0 z-50 bg-gray-900/45 backdrop-blur-[1px] flex items-end sm:items-center justify-center px-4"
+          className="fixed inset-0 z-[70] bg-gray-900/45 backdrop-blur-[1px] flex items-end sm:items-center justify-center px-4"
           onClick={() => setShowSuggestedMeals(false)}
         >
           <div

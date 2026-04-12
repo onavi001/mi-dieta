@@ -611,6 +611,31 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
     progress: true,
   })
 
+  const openOnlyStep = (step: StepName) => {
+    setCollapsed({
+      profile: step !== 'profile',
+      plan: step !== 'plan',
+      portions: true,
+      progress: step !== 'progress',
+    })
+
+    setTimeout(() => {
+      const stepEl = document.getElementById(`nutri-step-${step}`)
+      if (!stepEl) return
+
+      const scrollContainer = stepEl.closest('.overflow-y-auto')
+      if (scrollContainer instanceof HTMLElement) {
+        scrollContainer.scrollTo({
+          top: Math.max(stepEl.offsetTop - 8, 0),
+          behavior: 'smooth',
+        })
+        return
+      }
+
+      stepEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 140)
+  }
+
   const toggleCollapsed = (step: StepName) => {
     setCollapsed((prev) => ({ ...prev, [step]: !prev[step] }))
   }
@@ -620,6 +645,31 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
   const hasPlan = summary?.activePlanVersion !== null && summary?.activePlanVersion !== undefined
   const canAccessPlan = hasProfile
   const canAccessProgress = hasPlan
+
+  useEffect(() => {
+    if (!accessToken) return
+
+    // Always start Nutri at Step 1 with the following steps collapsed.
+    setCollapsed({
+      profile: false,
+      plan: true,
+      portions: true,
+      progress: true,
+    })
+
+    setTimeout(() => {
+      const profileEl = document.getElementById('nutri-step-profile')
+      if (!profileEl) return
+
+      const scrollContainer = profileEl.closest('.overflow-y-auto')
+      if (scrollContainer instanceof HTMLElement) {
+        scrollContainer.scrollTo({ top: Math.max(profileEl.offsetTop - 8, 0), behavior: 'auto' })
+        return
+      }
+
+      profileEl.scrollIntoView({ behavior: 'auto', block: 'start' })
+    }, 80)
+  }, [accessToken])
 
   const currentStep = useMemo(() => {
     if (!hasProfile) return 1
@@ -848,7 +898,10 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
     }
 
     const saved = await saveProfile(payload)
-    if (saved) setMessage('Perfil nutricional guardado.')
+    if (saved) {
+      setMessage('Perfil nutricional guardado.')
+      openOnlyStep('plan')
+    }
   }
 
   const handlePlanSubmit = async (event: React.FormEvent) => {
@@ -912,6 +965,7 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
       } else {
         setMessage(`Plan v${saved.version_number} guardado y activado, pero no se pudo generar la semana automaticamente. Intenta de nuevo en Dieta.`)
       }
+      openOnlyStep('progress')
     }
   }
 
@@ -1033,6 +1087,7 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
       } else {
         setMessage(`Plan sugerido guardado y activado (v${saved.version_number}), pero no se pudo generar la semana automaticamente. Intenta de nuevo en Dieta.`)
       }
+      openOnlyStep('progress')
     }
   }
 
@@ -1068,7 +1123,10 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
     }
 
     const saved = await saveProgressLog(payload)
-    if (saved) setMessage('Seguimiento guardado correctamente.')
+    if (saved) {
+      setMessage('Seguimiento guardado correctamente.')
+      setCollapsed((prev) => ({ ...prev, progress: true }))
+    }
   }
 
   if (!accessToken) {
@@ -1141,13 +1199,14 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
       </div>
 
       {/* STEP 1: Formulario Perfil */}
-      <CollapsibleCard
-        title="1. Tu Perfil Nutricional"
-        stepNumber={1}
-        isExpanded={collapsed.profile}
-        onToggle={() => toggleCollapsed('profile')}
-        isComplete={hasProfile}
-      >
+      <div id="nutri-step-profile">
+        <CollapsibleCard
+          title="1. Tu Perfil Nutricional"
+          stepNumber={1}
+          isExpanded={collapsed.profile}
+          onToggle={() => toggleCollapsed('profile')}
+          isComplete={hasProfile}
+        >
         <p className="text-[11px] text-gray-600 mb-2">Captura tu base clínica para calcular porciones y objetivos personalizados.</p>
         <form onSubmit={(event) => void handleProfileSubmit(event)} className="space-y-2">
           <div className="grid grid-cols-2 gap-2">
@@ -1244,17 +1303,19 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
             </button>
           </div>
         </form>
-      </CollapsibleCard>
+        </CollapsibleCard>
+      </div>
 
       {/* STEP 2: Plan y Porciones */}
-      <CollapsibleCard
-        title="2. Plan y Porciones"
-        stepNumber={2}
-        isExpanded={collapsed.plan}
-        onToggle={() => toggleCollapsed('plan')}
-        isDisabled={!canAccessPlan}
-        isComplete={hasPlan}
-      >
+      <div id="nutri-step-plan">
+        <CollapsibleCard
+          title="2. Plan y Porciones"
+          stepNumber={2}
+          isExpanded={collapsed.plan}
+          onToggle={() => toggleCollapsed('plan')}
+          isDisabled={!canAccessPlan}
+          isComplete={hasPlan}
+        >
         <p className="text-[11px] text-gray-600 mb-2">Define objetivos diarios y distribución por grupo alimenticio.</p>
         <form onSubmit={(event) => void handlePlanSubmit(event)} className="space-y-2">
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-2 text-[10px] text-amber-800">
@@ -1376,7 +1437,8 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
             )}
           </button>
         </form>
-      </CollapsibleCard>
+        </CollapsibleCard>
+      </div>
 
       {/* STEP 3: Dieta Profesional (solo lectura) */}
       {hasPlan && (
@@ -1407,13 +1469,14 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
       )}
 
       {/* STEP 4: Seguimiento */}
-      <CollapsibleCard
-        title="3. Seguimiento Semanal"
-        stepNumber={3}
-        isExpanded={collapsed.progress}
-        onToggle={() => toggleCollapsed('progress')}
-        isDisabled={!canAccessProgress}
-      >
+      <div id="nutri-step-progress">
+        <CollapsibleCard
+          title="3. Seguimiento Semanal"
+          stepNumber={3}
+          isExpanded={collapsed.progress}
+          onToggle={() => toggleCollapsed('progress')}
+          isDisabled={!canAccessProgress}
+        >
         <p className="text-[11px] text-gray-600 mb-2">Registra solo métricas relevantes para ajustar tu plan.</p>
         <form onSubmit={(event) => void handleProgressSubmit(event)} className="space-y-2">
           <div className="grid grid-cols-2 gap-2">
@@ -1457,7 +1520,8 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
             </div>
           </div>
         )}
-      </CollapsibleCard>
+        </CollapsibleCard>
+      </div>
     </div>
   )
 }
