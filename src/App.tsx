@@ -481,7 +481,9 @@ export default function App() {
         <div className="px-5 pt-5 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-emerald-600 rounded-2xl flex items-center justify-center text-white text-2xl">🥗</div>
+              <div className="w-9 h-9 rounded-2xl overflow-hidden border border-emerald-200 bg-white shadow-xs">
+                <img src="/favicon.svg" alt="Mi Dieta" className="h-full w-full object-cover" />
+              </div>
               <div>
                 <h1 className="text-xl font-semibold text-gray-900">Mi Dieta</h1>
                 <p className="text-xs text-emerald-700">{todayLabel} • {profile?.name || session.user.email || 'usuario'}</p>
