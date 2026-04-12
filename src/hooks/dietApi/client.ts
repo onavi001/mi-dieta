@@ -25,6 +25,7 @@ export function createDietApiClient(request: DietApiRequest) {
     logout: () => request('/api/auth/logout', 'POST'),
 
     loadProfile: () => request<{ profile: AuthProfile }>('/api/users/me/profile'),
+    resetMyData: () => request<{ reset: boolean }>('/api/users/me/reset-data', 'POST', {}),
 
     loadMyPlan: () => request<{ plan: RawPlan | null }>('/api/plans/my'),
     generatePlan: () => request<{ plan: RawPlan | null }>('/api/plans/my/generate', 'POST', {}),

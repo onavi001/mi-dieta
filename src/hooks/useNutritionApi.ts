@@ -1,8 +1,10 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getApiBaseUrl } from '../utils/apiBaseUrl'
 import { startApiRequest } from './apiActivity'
+import { writeStoredSession } from './dietApi/model'
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
+const UNAUTHORIZED_EVENT = 'mi-dieta:unauthorized'
 
 function getNutritionRequestLabel(path: string, method: HttpMethod): string {
   if (path.includes('/api/nutrition/summary')) return 'Cargando resumen nutricional...'
@@ -177,8 +179,13 @@ export function useNutritionApi(accessToken?: string) {
   const [summary, setSummary] = useState<NutritionSummaryResponse | null>(null)
   const [planVersions, setPlanVersions] = useState<NutritionPlanVersion[]>([])
   const [progressLogs, setProgressLogs] = useState<NutritionProgressLog[]>([])
+  const hasHandledUnauthorizedRef = useRef(false)
 
   const baseUrl = useMemo(() => getApiBaseUrl(), [])
+
+  useEffect(() => {
+    hasHandledUnauthorizedRef.current = false
+  }, [accessToken])
 
   const request = useCallback(async <T,>(path: string, method: HttpMethod, body?: unknown): Promise<T> => {
     if (!accessToken) throw new Error('No authenticated session')
@@ -195,10 +202,20 @@ export function useNutritionApi(accessToken?: string) {
         body: body === undefined ? undefined : JSON.stringify(body),
       })
 
-      const payload = (await response.json()) as ApiResponse<T>
+      if (response.status === 401) {
+        if (!hasHandledUnauthorizedRef.current) {
+          hasHandledUnauthorizedRef.current = true
+          writeStoredSession(null)
+          window.dispatchEvent(new CustomEvent(UNAUTHORIZED_EVENT))
+        }
 
-      if (!response.ok || !payload.ok || payload.data === undefined) {
-        throw new Error(payload.error || 'Nutrition request failed')
+        throw new Error('Sesion expirada. Inicia sesion nuevamente.')
+      }
+
+      const payload = (await response.json().catch(() => null)) as ApiResponse<T> | null
+
+      if (!response.ok || !payload?.ok || payload.data === undefined) {
+        throw new Error(payload?.error || 'Nutrition request failed')
       }
 
       return payload.data

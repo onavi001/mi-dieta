@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Comida, TipoComida } from '../data/types'
 import { getApiBaseUrl } from '../utils/apiBaseUrl'
 import { getCuratedExpandedMealsByType } from '../data/curatedMealCatalog'
@@ -26,6 +26,7 @@ import {
 export type { DietSlot, CombinedSlot, WeekPlan, WeekState, WeekStatePatch } from './dietApi/model'
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
+const UNAUTHORIZED_EVENT = 'mi-dieta:unauthorized'
 
 function getDietRequestLabel(path: string, method: HttpMethod): string {
   if (path.includes('/api/auth/login')) return 'Iniciando sesion...'
@@ -41,6 +42,7 @@ function getDietRequestLabel(path: string, method: HttpMethod): string {
   if (path.includes('/api/plans/combined/')) return 'Cargando plan combinado...'
   if (path.includes('/api/plans/my')) return 'Cargando plan semanal...'
   if (path.includes('/api/users/me/profile')) return 'Cargando perfil...'
+  if (path.includes('/api/users/me/reset-data')) return 'Eliminando tus datos...'
   if (path.includes('/api/shares/search')) return 'Buscando usuarios para compartir...'
   if (path.includes('/api/shares/invites') && method === 'POST') return 'Enviando invitacion...'
   if (path.includes('/api/shares/invites') && path.includes('/accept')) return 'Aceptando invitacion...'
@@ -63,6 +65,7 @@ export function useDietApi() {
     logout: 0,
     generatePlan: 0,
     updateGroceryState: 0,
+    resetMyData: 0,
   })
   const [session, setSession] = useState<ApiSession | null>(() => readStoredSession())
   const [profile, setProfile] = useState<AuthProfile | null>(null)
@@ -76,8 +79,23 @@ export function useDietApi() {
   const [viewMode, setViewMode] = useState<'my' | 'combined'>('my')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
+  const [isBootstrapped, setIsBootstrapped] = useState(false)
+  const hasHandledUnauthorizedRef = useRef(false)
 
   const baseUrl = useMemo(() => getApiBaseUrl(), [])
+
+  const clearSessionState = useCallback(() => {
+    writeStoredSession(null)
+    setSession(null)
+    setProfile(null)
+    setPlan(null)
+    setCombinedSlots([])
+    setShareUsers([])
+    setIncomingInvites([])
+    setOutgoingInvites([])
+    setSelectedShareUserId('')
+    setViewMode('my')
+  }, [])
 
   const request = useCallback(async <T>(
     path: string,
@@ -103,17 +121,26 @@ export function useDietApi() {
         body: body === undefined ? undefined : JSON.stringify(body),
       })
 
-      const payload = (await response.json()) as ApiResponse<T>
+      if (response.status === 401 && token) {
+        if (!hasHandledUnauthorizedRef.current) {
+          hasHandledUnauthorizedRef.current = true
+          clearSessionState()
+        }
 
-      if (!response.ok || !payload.ok || payload.data === undefined) {
-        throw new Error(payload.error || 'Request failed')
+        throw new Error('Sesion expirada. Inicia sesion nuevamente.')
+      }
+
+      const payload = (await response.json().catch(() => null)) as ApiResponse<T> | null
+
+      if (!response.ok || !payload?.ok || payload.data === undefined) {
+        throw new Error(payload?.error || 'Request failed')
       }
 
       return payload.data
     } finally {
       endRequest()
     }
-  }, [baseUrl, session?.accessToken])
+  }, [baseUrl, clearSessionState, session?.accessToken])
 
   const api = useMemo(() => createDietApiClient(request), [request])
 
@@ -171,24 +198,12 @@ export function useDietApi() {
 
     writeStoredSession(nextSession)
     setSession(nextSession)
+    hasHandledUnauthorizedRef.current = false
     return true
   }, [])
 
   const applyPlanPayload = useCallback((payload: { plan: RawPlan | null }) => {
     setPlan(normalizePlan(payload.plan))
-  }, [])
-
-  const clearSessionState = useCallback(() => {
-    writeStoredSession(null)
-    setSession(null)
-    setProfile(null)
-    setPlan(null)
-    setCombinedSlots([])
-    setShareUsers([])
-    setIncomingInvites([])
-    setOutgoingInvites([])
-    setSelectedShareUserId('')
-    setViewMode('my')
   }, [])
 
   const loadMyPlan = useCallback(async () => {
@@ -367,11 +382,14 @@ export function useDietApi() {
   }, [api, runWithAction, selectedShareUserId, viewMode])
 
   const bootstrap = useCallback(async () => {
+    setIsBootstrapped(false)
+
     if (!session?.accessToken) {
       setProfile(null)
       setPlan(null)
       setShareUsers([])
       setCombinedSlots([])
+      setIsBootstrapped(true)
       return
     }
 
@@ -379,11 +397,29 @@ export function useDietApi() {
       await Promise.all([loadProfile(), loadMyPlan(), loadShareUsers(), loadInvites()])
       return true
     }, 'Error al cargar datos')
+
+    setIsBootstrapped(true)
   }, [loadInvites, loadMyPlan, loadProfile, loadShareUsers, runWithLoading, session?.accessToken])
 
   useEffect(() => {
     bootstrap()
   }, [bootstrap])
+
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      if (!session?.accessToken || hasHandledUnauthorizedRef.current) return
+
+      hasHandledUnauthorizedRef.current = true
+      setError('Sesion expirada. Inicia sesion nuevamente.')
+      clearSessionState()
+    }
+
+    window.addEventListener(UNAUTHORIZED_EVENT, handleUnauthorized)
+
+    return () => {
+      window.removeEventListener(UNAUTHORIZED_EVENT, handleUnauthorized)
+    }
+  }, [clearSessionState, session?.accessToken])
 
   useEffect(() => {
     void loadCombinedPlan()
@@ -423,6 +459,23 @@ export function useDietApi() {
       return true
     })
   }, [api, clearSessionState, runWithAction, session?.accessToken])
+
+  const resetMyData = useCallback(async () => {
+    return runWithAction('resetMyData', async () => {
+      const data = await api.resetMyData()
+
+      setPlan(null)
+      setCombinedSlots([])
+      setShareUsers([])
+      setShareCandidates([])
+      setIncomingInvites([])
+      setOutgoingInvites([])
+      setSelectedShareUserId('')
+      setViewMode('my')
+
+      return Boolean(data?.reset)
+    })
+  }, [api, runWithAction])
 
   const swapMeal = useCallback(async (slotId: string, tipo: TipoComida, currentMealId: string) => {
     void slotId
@@ -518,10 +571,12 @@ export function useDietApi() {
     fetchSlotAlternatives,
     generatePlan,
     refresh: bootstrap,
+    resetMyData,
   }), [
     bootstrap,
     fetchSlotAlternatives,
     generatePlan,
+    resetMyData,
     replaceIngredient,
     setSlotMeal,
     setSlotCompleted,
@@ -532,6 +587,7 @@ export function useDietApi() {
 
   return {
     loading,
+    isBootstrapped,
     error,
     actionLoading: {
       searchShareCandidates: actionCounts.searchShareCandidates > 0,
@@ -544,6 +600,7 @@ export function useDietApi() {
       logout: actionCounts.logout > 0,
       generatePlan: actionCounts.generatePlan > 0,
       updateGroceryState: actionCounts.updateGroceryState > 0,
+      resetMyData: actionCounts.resetMyData > 0,
     },
     session,
     profile,

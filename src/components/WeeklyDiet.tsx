@@ -174,6 +174,7 @@ export function WeeklyDiet({
   const [mealSuggestionPreferences, setMealSuggestionPreferences] = useState<MealRankingPreferences>(() => weekState?.suggestionPreferences || DEFAULT_MEAL_SUGGESTION_PREFERENCES)
   const [slotSuggestedMeals, setSlotSuggestedMeals] = useState<Record<string, Comida[]>>({})
   const [loadingSlotSuggestions, setLoadingSlotSuggestions] = useState<Record<string, boolean>>({})
+  const [loadedSuggestionKeyBySlot, setLoadedSuggestionKeyBySlot] = useState<Record<string, string>>({})
   const [portionOverrides, setPortionOverrides] = useState<PortionOverrides>(() => weekState?.ingredientMultipliers || {})
   const [replacingIngredients, setReplacingIngredients] = useState<ReplacingIngredientMap>({})
   const [slotSaveStates, setSlotSaveStates] = useState<Record<string, SlotSaveState>>({})
@@ -776,10 +777,20 @@ export function WeeklyDiet({
   const loadSlotAlternatives = async (slotId: string, currentMealId: string | null) => {
     if (!onLoadSlotAlternatives) return
 
+    const suggestionKey = `${slotId}::${currentMealId || 'none'}`
+    if (loadingSlotSuggestions[slotId]) return
+    if (loadedSuggestionKeyBySlot[slotId] === suggestionKey && Array.isArray(slotSuggestedMeals[slotId])) {
+      return
+    }
+
     setLoadingSlotSuggestions((prev) => ({ ...prev, [slotId]: true }))
-    const suggestions = await onLoadSlotAlternatives(slotId, currentMealId)
-    setSlotSuggestedMeals((prev) => ({ ...prev, [slotId]: suggestions }))
-    setLoadingSlotSuggestions((prev) => ({ ...prev, [slotId]: false }))
+    try {
+      const suggestions = await onLoadSlotAlternatives(slotId, currentMealId)
+      setSlotSuggestedMeals((prev) => ({ ...prev, [slotId]: suggestions }))
+      setLoadedSuggestionKeyBySlot((prev) => ({ ...prev, [slotId]: suggestionKey }))
+    } finally {
+      setLoadingSlotSuggestions((prev) => ({ ...prev, [slotId]: false }))
+    }
   }
 
   const toggleCuisinePreference = (tag: string) => {
