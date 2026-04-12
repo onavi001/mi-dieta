@@ -282,10 +282,12 @@ export function MealCard({
   onClearSuggestedMeal,
   swapEnabled = true,
 }: MealCardProps) {
+  const INITIAL_VISIBLE_ALTERNATIVES = 5
   const [swipeOffset, setSwipeOffset] = useState(0)
   const [conversionState, setConversionState] = useState<ConversionModalState | null>(null)
   const [showGroupBreakdown, setShowGroupBreakdown] = useState(false)
   const [showSuggestedMeals, setShowSuggestedMeals] = useState(false)
+  const [showAllSuggestedMeals, setShowAllSuggestedMeals] = useState(false)
   const [showIngredientTools, setShowIngredientTools] = useState(false)
   const [ingredientPopup, setIngredientPopup] = useState<{ idx: number; ingId: string; ingText: string; options: string[] } | null>(null)
   const [ingredientSearch, setIngredientSearch] = useState('')
@@ -490,6 +492,7 @@ export function MealCard({
                       if (onOpenSuggestedMeals) {
                         await onOpenSuggestedMeals()
                       }
+                      setShowAllSuggestedMeals(false)
                       setShowSuggestedMeals(true)
                     }}
                     disabled={suggestionsLoading}
@@ -802,7 +805,10 @@ export function MealCard({
       {showSuggestedMeals && suggestedMeals.length > 0 && (
         <div
           className="fixed inset-0 z-[70] bg-gray-900/45 backdrop-blur-[1px] flex items-end sm:items-center justify-center px-4"
-          onClick={() => setShowSuggestedMeals(false)}
+          onClick={() => {
+            setShowSuggestedMeals(false)
+            setShowAllSuggestedMeals(false)
+          }}
         >
           <div
             className="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-3xl p-4 sm:p-5 shadow-xl max-h-[85vh] overflow-y-auto"
@@ -816,7 +822,10 @@ export function MealCard({
               </div>
               <button
                 type="button"
-                onClick={() => setShowSuggestedMeals(false)}
+                onClick={() => {
+                  setShowSuggestedMeals(false)
+                  setShowAllSuggestedMeals(false)
+                }}
                 className="px-3 py-2 min-h-9 rounded-lg text-sm font-medium bg-gray-100 text-gray-700 active:bg-gray-200"
               >
                 ✕
@@ -837,7 +846,7 @@ export function MealCard({
             )}
 
             <div className="space-y-3">
-              {suggestedMeals.map((item) => {
+              {(showAllSuggestedMeals ? suggestedMeals : suggestedMeals.slice(0, INITIAL_VISIBLE_ALTERNATIVES)).map((item) => {
                 const cuisine = item.meal.realDishMetadata?.cuisineTags?.[0]
                 const prepMinutes = item.meal.realDishMetadata?.prepTimeMinutes
                 const profileBadges = getMealProfileBadges(item.meal, profileFoodRules)
@@ -913,6 +922,18 @@ export function MealCard({
                   </div>
                 )
               })}
+
+              {suggestedMeals.length > INITIAL_VISIBLE_ALTERNATIVES && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllSuggestedMeals((prev) => !prev)}
+                  className="w-full px-3 py-2.5 min-h-10 rounded-xl text-sm font-semibold bg-gray-100 text-gray-800 active:bg-gray-200"
+                >
+                  {showAllSuggestedMeals
+                    ? 'Ver menos'
+                    : `Ver mas (${suggestedMeals.length - INITIAL_VISIBLE_ALTERNATIVES} restantes)`}
+                </button>
+              )}
             </div>
           </div>
         </div>

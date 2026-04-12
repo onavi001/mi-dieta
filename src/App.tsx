@@ -8,6 +8,13 @@ import { detectIngredientGroup } from './data/ingredientConversionUtils'
 import { getCuratedExpandedMealsByType } from './data/curatedMealCatalog'
 import { estimateMealGroupPortions, rankMealsForGroupTarget } from './data/mealCatalogMatching'
 import {
+  distributeGroupPortionsByMeal,
+  mealDistributionKeys,
+  mealDistributionWeightsMap,
+  profileGoalToNutritionGoal,
+  type DistributionKey,
+} from './data/professionalNutritionRules'
+import {
   filterAndSortMealsForProfile,
   isIngredientExcludedForProfile,
   pickReplacementIngredient,
@@ -218,80 +225,161 @@ export default function App() {
       if (!generatedPlan) return false
 
       const hasGeneratedMeals = generatedPlan.slots.some((slot) => Boolean(slot.meal))
-      if (!hasGeneratedMeals) return false
 
-      const nutritionData = summary || await loadSummary()
-      const nutritionProfile = nutritionData?.nutritionProfile
-      if (!nutritionProfile) return true
+      try {
+        const nutritionData = summary || await loadSummary()
+        const nutritionProfile = nutritionData?.nutritionProfile
+        if (!nutritionProfile) return true
 
-      const profileFoodRules = {
-        allergies: nutritionProfile.allergies,
-        intolerances: nutritionProfile.intolerances,
-        foodPreferences: nutritionProfile.food_preferences,
-      }
+        const profileFoodRules = {
+          allergies: nutritionProfile.allergies,
+          intolerances: nutritionProfile.intolerances,
+          foodPreferences: nutritionProfile.food_preferences,
+        }
 
-      const suggestionPreferences = weekState?.suggestionPreferences || {
-        preferredCuisineTags: [],
-        preferQuickMeals: false,
-        avoidFish: false,
-        preferMeasuredMeals: true,
-        autoApplyToGeneratedWeek: true,
-      }
+        const suggestionPreferences = weekState?.suggestionPreferences || {
+          preferredCuisineTags: [],
+          preferQuickMeals: false,
+          avoidFish: false,
+          preferMeasuredMeals: true,
+          autoApplyToGeneratedWeek: true,
+        }
 
-      for (const slot of generatedPlan.slots) {
-        if (!slot.meal) continue
+        const GROUP_KEYS: PlanGroupKey[] = [
+          'verduras',
+          'frutas',
+          'cereales_tuberculos',
+          'leguminosas',
+          'proteina_animal_o_alternativas',
+          'lacteos_o_sustitutos',
+          'grasas_saludables',
+        ]
 
-        for (const [ingredientIndex, ingredient] of slot.meal.ingredientes.entries()) {
-          if (!isIngredientExcludedForProfile(ingredient.id, profileFoodRules)) {
-            continue
+        const createEmptyTotals = (): Record<PlanGroupKey, number> => ({
+          verduras: 0,
+          frutas: 0,
+          cereales_tuberculos: 0,
+          leguminosas: 0,
+          proteina_animal_o_alternativas: 0,
+          lacteos_o_sustitutos: 0,
+          grasas_saludables: 0,
+        })
+
+        const mealDistributionKeyFromTipo = (tipo: string): DistributionKey => {
+          const normalized = tipo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+
+          if (normalized.includes('desayuno')) return 'breakfast'
+          if (normalized.includes('comida')) return 'lunch'
+          if (normalized.includes('cena')) return 'dinner'
+          if (normalized.includes('manana')) return 'snackAm'
+          return 'snackPm'
+        }
+
+        const selectedMealsPerDay = Math.max(3, Math.min(5, Number(nutritionProfile.meals_per_day || 5)))
+        const distributionKeys = mealDistributionKeys(selectedMealsPerDay)
+
+        const rawDistributionByMeal = nutritionData?.activePlanVersion?.distribution_by_meal || {}
+        const distributionWeightsByKey = mealDistributionWeightsMap(selectedMealsPerDay, {
+          breakfast: Number(rawDistributionByMeal.breakfast || 25),
+          snackAm: Number(rawDistributionByMeal.snackAm || 10),
+          lunch: Number(rawDistributionByMeal.lunch || 35),
+          snackPm: Number(rawDistributionByMeal.snackPm || 10),
+          dinner: Number(rawDistributionByMeal.dinner || 20),
+        })
+
+        const rawPlanPortions = nutritionData?.activePlanVersion?.portions_by_group as Partial<Record<PlanGroupKey, number>> | undefined
+        const hasPlanPortions = Boolean(rawPlanPortions)
+        const planPortionsByGroup: Record<PlanGroupKey, number> = {
+          verduras: Number(rawPlanPortions?.verduras || 0),
+          frutas: Number(rawPlanPortions?.frutas || 0),
+          cereales_tuberculos: Number(rawPlanPortions?.cereales_tuberculos || 0),
+          leguminosas: Number(rawPlanPortions?.leguminosas || 0),
+          proteina_animal_o_alternativas: Number(rawPlanPortions?.proteina_animal_o_alternativas || 0),
+          lacteos_o_sustitutos: Number(rawPlanPortions?.lacteos_o_sustitutos || 0),
+          grasas_saludables: Number(rawPlanPortions?.grasas_saludables || 0),
+        }
+        const nutritionGoal = profileGoalToNutritionGoal(nutritionProfile.objective_goal)
+
+        const targetPortionsForSlot = (slotTipo: string): Record<PlanGroupKey, number> => {
+          if (!hasPlanPortions) return createEmptyTotals()
+
+          const slotKey = mealDistributionKeyFromTipo(slotTipo)
+          const targets = createEmptyTotals()
+
+          for (const group of GROUP_KEYS) {
+            const distribution = distributeGroupPortionsByMeal(
+              group,
+              planPortionsByGroup[group],
+              distributionKeys,
+              distributionWeightsByKey,
+              { goal: nutritionGoal }
+            )
+            targets[group] = Number((distribution[slotKey] || 0).toFixed(2))
           }
 
-          const group = detectIngredientGroup(ingredient.id, `${ingredient.id} ${ingredient.presentacion || ''}`)
-          if (!group) continue
+          return targets
+        }
 
-          const replacement = pickReplacementIngredient(ingredient.id, ingredientOptionsByGroup[group], profileFoodRules)
+        for (const slot of generatedPlan.slots) {
+          if (!slot.meal) continue
 
-          if (!replacement || replacement === ingredient.id) continue
+          for (const [ingredientIndex, ingredient] of slot.meal.ingredientes.entries()) {
+            if (!isIngredientExcludedForProfile(ingredient.id, profileFoodRules)) {
+              continue
+            }
 
-          try {
-            await replaceIngredient(slot.slot, ingredientIndex, replacement, generatedPlan.week)
-          } catch {
-            // Keep base generated week even if a replacement fails.
+            const group = detectIngredientGroup(ingredient.id, `${ingredient.id} ${ingredient.presentacion || ''}`)
+            if (!group) continue
+
+            const replacement = pickReplacementIngredient(ingredient.id, ingredientOptionsByGroup[group], profileFoodRules)
+
+            if (!replacement || replacement === ingredient.id) continue
+
+            try {
+              await replaceIngredient(slot.slot, ingredientIndex, replacement, generatedPlan.week)
+            } catch {
+              // Keep base generated week even if a replacement fails.
+            }
           }
         }
-      }
+        const mealOverrides: Record<string, NonNullable<typeof generatedPlan.slots[number]['meal']>> = {}
 
-      const rankedOverrideEntries = await Promise.all(
-        generatedPlan.slots
-          .filter((slot) => Boolean(slot.meal))
-          .map(async (slot) => {
-            if (!slot.meal) return null
+        for (const slot of generatedPlan.slots) {
+          const alternatives = getCuratedExpandedMealsByType(slot.tipo)
+          if (alternatives.length === 0) continue
 
-            // Use local curated catalog for auto-apply to avoid one backend call per slot.
-            const alternatives = getCuratedExpandedMealsByType(slot.tipo)
-              .filter((meal) => meal.id !== slot.meal?.id)
-            const compatibleAlternatives = filterAndSortMealsForProfile(alternatives, profileFoodRules)
-            if (compatibleAlternatives.length === 0) return null
+          const compatibleAlternatives = filterAndSortMealsForProfile(alternatives, profileFoodRules)
+          const candidatePool = compatibleAlternatives.length > 0 ? compatibleAlternatives : alternatives
+          if (candidatePool.length === 0) continue
 
-            const ranked = rankMealsForGroupTarget(
-              compatibleAlternatives,
-              estimateMealGroupPortions(slot.meal),
-              { preferences: suggestionPreferences }
-            )
+          const targetPortions = hasPlanPortions
+            ? targetPortionsForSlot(slot.tipo)
+            : slot.meal
+              ? estimateMealGroupPortions(slot.meal)
+              : estimateMealGroupPortions(candidatePool[0])
 
-            const bestMatch = ranked[0]?.meal
-            if (!bestMatch) return null
-
-            return [slot.slot, bestMatch] as const
+          const ranked = rankMealsForGroupTarget(candidatePool, targetPortions, {
+            preferences: suggestionPreferences,
           })
-      )
 
-      const mealOverrides = Object.fromEntries(rankedOverrideEntries.filter((entry): entry is readonly [string, NonNullable<typeof entry>[1]] => Boolean(entry)))
-      if (Object.keys(mealOverrides).length > 0) {
-        await syncWeekState({ mealOverrides, week: generatedPlan.week })
+          const fallbackMeal = ranked[0]?.meal || candidatePool[0]
+          if (!fallbackMeal) continue
+
+          const mustOverride = !slot.meal || slot.meal.id !== fallbackMeal.id
+          if (mustOverride) {
+            mealOverrides[slot.slot] = fallbackMeal
+          }
+        }
+
+        if (Object.keys(mealOverrides).length > 0) {
+          await syncWeekState({ mealOverrides, week: generatedPlan.week })
+        }
+
+        return hasGeneratedMeals || Object.keys(mealOverrides).length > 0
+      } catch {
+        // If optimization fails, keep base generated meals instead of failing the entire flow.
+        return hasGeneratedMeals
       }
-
-      return true
     } catch {
       return false
     }

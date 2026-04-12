@@ -585,7 +585,7 @@ export function WeeklyDiet({
       return left.meal.nombre.localeCompare(right.meal.nombre, 'es')
     })
 
-    suggestedMealsBySlot[meal.slotId] = deduped.slice(0, 3)
+    suggestedMealsBySlot[meal.slotId] = deduped
   }
 
   const toggleCard = (id: string) => {
