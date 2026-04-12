@@ -627,12 +627,12 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
       if (scrollContainer instanceof HTMLElement) {
         scrollContainer.scrollTo({
           top: Math.max(stepEl.offsetTop - 8, 0),
-          behavior: 'smooth',
+          behavior: 'auto',
         })
         return
       }
 
-      stepEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      stepEl.scrollIntoView({ behavior: 'auto', block: 'start' })
     }, 140)
   }
 
