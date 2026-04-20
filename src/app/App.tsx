@@ -377,10 +377,10 @@ export default function App() {
 
           {authMessage && <p className="text-xs text-emerald-700 mt-3">{authMessage}</p>}
           {error && <p className="text-xs text-red-600 mt-3">{error}</p>}
-          </form>
           <LegalFooter onOpen={setLegalView} className="mt-6 max-w-sm mx-auto px-1" />
+          </form>
         </div>
-
+              
         <LegalSheet view={legalView} onClose={() => setLegalView(null)} />
 
         {isOverlayVisible && (
