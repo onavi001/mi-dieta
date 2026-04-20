@@ -1,4 +1,4 @@
-import type { Comida, TipoComida } from '../../data/types'
+import type { Comida, TipoComida } from '../../types/domain'
 
 const SESSION_KEY = 'miDietaApiSession'
 
@@ -68,6 +68,10 @@ export type RawCombinedSlot = {
 
 export interface ApiSession {
   accessToken: string
+  /** Supabase refresh token; permite renovar el JWT sin volver a iniciar sesión. */
+  refreshToken?: string
+  /** Unix segundos (JWT exp), para renovar antes de caducar. */
+  expiresAt?: number
   user: {
     id: string
     email?: string
@@ -81,6 +85,8 @@ export type AuthPayload = {
   }
   session: {
     access_token: string
+    refresh_token?: string
+    expires_at?: number
   } | null
 }
 
@@ -358,3 +364,5 @@ export function writeStoredSession(session: ApiSession | null): void {
 
   localStorage.setItem(SESSION_KEY, JSON.stringify(session))
 }
+
+export type { IngredientReferencePayload } from '../../data/reference/ingredientReference'

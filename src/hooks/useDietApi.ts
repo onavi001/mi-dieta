@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { Comida, TipoComida } from '../data/types'
+import type { Comida, TipoComida } from '../types/domain'
 import { getApiBaseUrl } from '../utils/apiBaseUrl'
-import { getCuratedExpandedMealsByType } from '../data/curatedMealCatalog'
+import { logApiRequestFailed } from '../utils/clientLog'
 import { createDietApiClient } from './dietApi/client'
 import { startApiRequest } from './apiActivity'
 import {
@@ -22,6 +22,8 @@ import {
   readStoredSession,
   writeStoredSession,
 } from './dietApi/model'
+import { hydrateIngredientReference, isIngredientReferenceHydrated } from '../data/reference/ingredientReference'
+import { refreshStoredSession, SESSION_REFRESH_EVENT } from './dietApi/refreshStoredSession'
 
 export type { DietSlot, CombinedSlot, WeekPlan, WeekState, WeekStatePatch } from './dietApi/model'
 
@@ -31,6 +33,7 @@ const UNAUTHORIZED_EVENT = 'mi-dieta:unauthorized'
 function getDietRequestLabel(path: string, method: HttpMethod): string {
   if (path.includes('/api/auth/login')) return 'Iniciando sesion...'
   if (path.includes('/api/auth/register')) return 'Creando cuenta...'
+  if (path.includes('/api/auth/refresh')) return 'Renovando sesion...'
   if (path.includes('/api/auth/logout')) return 'Cerrando sesion...'
   if (path.includes('/api/plans/my/generate')) return 'Generando plan de comidas...'
   if (path.includes('/api/plans/my/alternatives')) return 'Cargando alternativas de comidas...'
@@ -40,6 +43,8 @@ function getDietRequestLabel(path: string, method: HttpMethod): string {
   if (path.includes('/api/plans/my/complete')) return 'Guardando avance del dia...'
   if (path.includes('/api/plans/my/grocery')) return 'Guardando lista del super...'
   if (path.includes('/api/plans/combined/')) return 'Cargando plan combinado...'
+  if (path.includes('/api/meals')) return 'Cargando catalogo de comidas...'
+  if (path.includes('/api/reference/ingredients')) return 'Cargando referencia de ingredientes...'
   if (path.includes('/api/plans/my')) return 'Cargando plan semanal...'
   if (path.includes('/api/users/me/profile')) return 'Cargando perfil...'
   if (path.includes('/api/users/me/reset-data')) return 'Eliminando tus datos...'
@@ -105,23 +110,36 @@ export function useDietApi() {
   ): Promise<T> => {
     const endRequest = startApiRequest(getDietRequestLabel(path, method))
 
-    const token = tokenOverride || session?.accessToken
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
+    const skipRefreshOn401 =
+      path.includes('/api/auth/login') ||
+      path.includes('/api/auth/register') ||
+      path.includes('/api/auth/refresh')
 
-    if (token) {
-      headers.Authorization = `Bearer ${token}`
-    }
-
-    try {
-      const response = await fetch(`${baseUrl}${path}`, {
+    const runFetch = (bearer: string | undefined) =>
+      fetch(`${baseUrl}${path}`, {
         method,
-        headers,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(bearer ? { Authorization: `Bearer ${bearer}` } : {}),
+        },
         body: body === undefined ? undefined : JSON.stringify(body),
       })
 
-      if (response.status === 401 && token) {
+    const bearer = tokenOverride || session?.accessToken
+
+    try {
+      let response = await runFetch(bearer)
+
+      if (response.status === 401 && bearer && !skipRefreshOn401) {
+        const next = await refreshStoredSession(baseUrl)
+        if (next) {
+          setSession(next)
+          hasHandledUnauthorizedRef.current = false
+          response = await runFetch(next.accessToken)
+        }
+      }
+
+      if (response.status === 401 && bearer) {
         if (!hasHandledUnauthorizedRef.current) {
           hasHandledUnauthorizedRef.current = true
           clearSessionState()
@@ -137,6 +155,9 @@ export function useDietApi() {
       }
 
       return payload.data
+    } catch (err) {
+      logApiRequestFailed(path, method, err)
+      throw err
     } finally {
       endRequest()
     }
@@ -190,6 +211,8 @@ export function useDietApi() {
 
     const nextSession: ApiSession = {
       accessToken: data.session.access_token,
+      refreshToken: typeof data.session.refresh_token === 'string' ? data.session.refresh_token : undefined,
+      expiresAt: typeof data.session.expires_at === 'number' ? data.session.expires_at : undefined,
       user: {
         id: data.user.id,
         email: data.user.email,
@@ -219,26 +242,46 @@ export function useDietApi() {
     })
   }, [api, applyPlanPayload, runWithAction])
 
+  const fetchAllMealsCatalog = useCallback(async (): Promise<Comida[]> => {
+    const data = await api.loadMealsCatalog()
+    return (data.meals || [])
+      .map((meal) => normalizeMeal(meal))
+      .filter((meal): meal is Comida => Boolean(meal))
+  }, [api])
+
+  const loadIngredientReference = useCallback(async () => {
+    if (isIngredientReferenceHydrated()) return
+    const data = await api.loadIngredientReference()
+    hydrateIngredientReference(data)
+  }, [api])
+
   const fetchSlotAlternatives = useCallback(async (slotId: string, currentMealId: string | null): Promise<Comida[]> => {
-    const buildLocalFallback = (): Comida[] => {
+    const buildLocalFallback = async (): Promise<Comida[]> => {
       const slotTipo = (plan?.slots || []).find((slot) => slot.slot === slotId)?.tipo
       if (!slotTipo) return []
 
-      return getCuratedExpandedMealsByType(slotTipo)
-        .filter((meal) => !currentMealId || meal.id !== currentMealId)
+      try {
+        const data = await api.loadMealsCatalog(slotTipo)
+        return (data.meals || [])
+          .map((meal) => normalizeMeal(meal))
+          .filter((meal): meal is Comida => Boolean(meal))
+          .filter((meal) => !currentMealId || meal.id !== currentMealId)
+      } catch {
+        return []
+      }
     }
 
     try {
       const data = await api.loadSlotAlternatives(slotId, currentMealId)
       if (!Array.isArray(data.suggestedMeals) || data.suggestedMeals.length === 0) {
-        return buildLocalFallback()
+        return await buildLocalFallback()
       }
 
       return data.suggestedMeals
         .map((meal) => normalizeMeal(meal))
         .filter((meal): meal is Comida => Boolean(meal))
     } catch (err) {
-      const fallback = buildLocalFallback()
+      const fallback = await buildLocalFallback()
       if (fallback.length > 0) {
         return fallback
       }
@@ -389,21 +432,60 @@ export function useDietApi() {
       setPlan(null)
       setShareUsers([])
       setCombinedSlots([])
+      try {
+        await loadIngredientReference()
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'No se pudo cargar la referencia de ingredientes'
+        setError(message)
+      }
       setIsBootstrapped(true)
       return
     }
 
     await runWithLoading(async () => {
-      await Promise.all([loadProfile(), loadMyPlan(), loadShareUsers(), loadInvites()])
+      await Promise.all([loadProfile(), loadMyPlan(), loadShareUsers(), loadInvites(), loadIngredientReference()])
       return true
     }, 'Error al cargar datos')
 
     setIsBootstrapped(true)
-  }, [loadInvites, loadMyPlan, loadProfile, loadShareUsers, runWithLoading, session?.accessToken])
+  }, [loadIngredientReference, loadInvites, loadMyPlan, loadProfile, loadShareUsers, runWithLoading, session?.accessToken])
 
   useEffect(() => {
     bootstrap()
   }, [bootstrap])
+
+  useEffect(() => {
+    const onExternalRefresh = () => {
+      const s = readStoredSession()
+      if (s) {
+        setSession(s)
+        hasHandledUnauthorizedRef.current = false
+      }
+    }
+    window.addEventListener(SESSION_REFRESH_EVENT, onExternalRefresh)
+    return () => window.removeEventListener(SESSION_REFRESH_EVENT, onExternalRefresh)
+  }, [])
+
+  useEffect(() => {
+    if (!session?.refreshToken || !session.expiresAt) return undefined
+
+    const now = Math.floor(Date.now() / 1000)
+    const secLeft = session.expiresAt - now - 120
+    const schedule = () => {
+      void refreshStoredSession(baseUrl).then((next) => {
+        if (next) setSession(next)
+      })
+    }
+
+    if (secLeft <= 0) {
+      schedule()
+      return undefined
+    }
+
+    const ms = Math.max(10_000, secLeft * 1000)
+    const id = window.setTimeout(schedule, ms)
+    return () => window.clearTimeout(id)
+  }, [baseUrl, session?.expiresAt, session?.refreshToken])
 
   useEffect(() => {
     const handleUnauthorized = () => {
@@ -497,10 +579,10 @@ export function useDietApi() {
   }, [api, applyPlanPayload, plan?.week])
 
   const replaceIngredient = useCallback(async (slotId: string, ingredientIndex: number, nextIngredientId: string, week?: string) => {
-    const data = await api.replaceIngredient(slotId, ingredientIndex, nextIngredientId, week)
+    const data = await api.replaceIngredient(slotId, ingredientIndex, nextIngredientId, week || plan?.week)
 
     applyPlanPayload(data)
-  }, [api, applyPlanPayload])
+  }, [api, applyPlanPayload, plan?.week])
 
   const updateGroceryState = useCallback(async (nextState: { checked: string[]; onlyPending: boolean }) => {
     await runWithAction('updateGroceryState', async () => {
@@ -569,11 +651,13 @@ export function useDietApi() {
     updateGroceryState,
     syncWeekState,
     fetchSlotAlternatives,
+    fetchAllMealsCatalog,
     generatePlan,
     refresh: bootstrap,
     resetMyData,
   }), [
     bootstrap,
+    fetchAllMealsCatalog,
     fetchSlotAlternatives,
     generatePlan,
     resetMyData,

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { GroceryAdjustment } from '../data/types'
+import type { GroceryAdjustment } from '../types/domain'
 
 // Hook para gestionar ajustes manuales en la lista de compras
 export function useGroceryAdjustments(onSync?: (adjustments: GroceryAdjustment[]) => void) {

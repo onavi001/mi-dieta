@@ -1,6 +1,7 @@
 import type {
   AuthPayload,
   AuthProfile,
+  IngredientReferencePayload,
   RawCombinedSlot,
   RawMeal,
   RawPlan,
@@ -26,6 +27,13 @@ export function createDietApiClient(request: DietApiRequest) {
 
     loadProfile: () => request<{ profile: AuthProfile }>('/api/users/me/profile'),
     resetMyData: () => request<{ reset: boolean }>('/api/users/me/reset-data', 'POST', {}),
+
+    loadMealsCatalog: (tipo?: string) =>
+      request<{ meals: RawMeal[] }>(
+        tipo ? `/api/meals?tipo=${encodeURIComponent(tipo)}` : '/api/meals'
+      ),
+
+    loadIngredientReference: () => request<IngredientReferencePayload>('/api/reference/ingredients'),
 
     loadMyPlan: () => request<{ plan: RawPlan | null }>('/api/plans/my'),
     generatePlan: () => request<{ plan: RawPlan | null }>('/api/plans/my/generate', 'POST', {}),

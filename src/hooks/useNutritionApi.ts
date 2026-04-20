@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getApiBaseUrl } from '../utils/apiBaseUrl'
+import { logApiRequestFailed } from '../utils/clientLog'
 import { startApiRequest } from './apiActivity'
 import { writeStoredSession } from './dietApi/model'
+import { refreshStoredSession } from './dietApi/refreshStoredSession'
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
 const UNAUTHORIZED_EVENT = 'mi-dieta:unauthorized'
@@ -166,7 +168,7 @@ export interface NutritionCalculatedPlan {
   meals: NutritionCalculatedMeal[]
 }
 
-interface NutritionSummaryResponse {
+export interface NutritionSummaryResponse {
   nutritionProfile: NutritionProfile | null
   activePlanVersion: NutritionPlanVersion | null
   recentProgress: NutritionProgressLog[]
@@ -193,14 +195,25 @@ export function useNutritionApi(accessToken?: string) {
     const endRequest = startApiRequest(getNutritionRequestLabel(path, method))
 
     try {
-      const response = await fetch(`${baseUrl}${path}`, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: body === undefined ? undefined : JSON.stringify(body),
-      })
+      const runFetch = (token: string) =>
+        fetch(`${baseUrl}${path}`, {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: body === undefined ? undefined : JSON.stringify(body),
+        })
+
+      let response = await runFetch(accessToken)
+
+      if (response.status === 401) {
+        const next = await refreshStoredSession(baseUrl)
+        if (next) {
+          hasHandledUnauthorizedRef.current = false
+          response = await runFetch(next.accessToken)
+        }
+      }
 
       if (response.status === 401) {
         if (!hasHandledUnauthorizedRef.current) {
@@ -219,6 +232,9 @@ export function useNutritionApi(accessToken?: string) {
       }
 
       return payload.data
+    } catch (err) {
+      logApiRequestFailed(path, method, err)
+      throw err
     } finally {
       endRequest()
     }
