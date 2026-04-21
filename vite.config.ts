@@ -8,6 +8,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // https://vite.dev/config/
 export default defineConfig({
+  // Rutas relativas: necesario para que el bundle cargue bien dentro del WebView de Capacitor
+  base: './',
   plugins: [react(), tailwindcss()],
   test: {
     setupFiles: ['./src/test/setup.ts'],

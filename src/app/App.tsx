@@ -123,6 +123,17 @@ export default function App() {
     }
   }, [])
 
+  useEffect(() => {
+    try {
+      const legal = new URLSearchParams(window.location.search).get('legal')
+      if (legal === 'terms' || legal === 'privacy' || legal === 'contact') {
+        setLegalView(legal)
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
   const todayLabel = new Date().toLocaleDateString('es-ES', {
     weekday: 'short',
     day: 'numeric',

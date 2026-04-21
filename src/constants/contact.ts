@@ -8,6 +8,11 @@
 export const SITE_ORIGIN = 'https://mi-dieta.netlify.app'
 export const API_ORIGIN_PUBLIC = 'https://mi-dieta-api.onrender.com'
 
+/** URLs públicas para Google Play, políticas, etc. (abren el texto legal en la web). */
+export const PUBLIC_PRIVACY_URL = `${SITE_ORIGIN}/?legal=privacy`
+export const PUBLIC_TERMS_URL = `${SITE_ORIGIN}/?legal=terms`
+export const PUBLIC_CONTACT_INFO_URL = `${SITE_ORIGIN}/?legal=contact`
+
 const LOCAL_CONTACT_EMAIL = 'onavi.001+support@gmail.com'
 
 export const CONTACT_EMAIL =

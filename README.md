@@ -101,6 +101,21 @@ mi-dieta/
 - Define `VITE_DIETA_API_BASE` en el panel del hosting con la URL del API en producción.
 - **Previews de Netlify:** cada preview tiene su propia URL; el backend debe permitirla en CORS (`CLIENT_URLS` en **mi-dieta-api**, lista separada por comas).
 
+### Android (Capacitor → Google Play)
+
+Hay un proyecto nativo en `android/` generado con [Capacitor](https://capacitorjs.com/). El **application id** está en `capacitor.config.ts` (`com.onavi001.midieta`); debe ser el mismo que declares en Play Console (no lo cambies a la ligera).
+
+**Antes de `cap:sync`:** la app nativa no puede usar `http://localhost:3000`. Copia `.env.production.example` a **`.env.production`** y pon `VITE_DIETA_API_BASE` con la **URL HTTPS** del API (la misma que en Netlify). Sin eso el login falla con `Failed to fetch`.
+
+1. Instala **Android Studio** (SDK + emulador opcional).
+2. Genera el bundle web y copia a Android: `npm run cap:sync` (equivale a `npm run build` + `npx cap sync`).
+3. Abre el IDE: `npm run cap:open:android`.
+4. En Android Studio: **Build → Generate Signed App Bundle**, firma el **AAB** y súbelo a Play Console.
+
+Los archivos copiados bajo `android/app/src/main/assets/public` están en `.gitignore`; en un clone nuevo hace falta `npm run cap:sync` antes de compilar. El `vite.config` usa `base: './'` para que los assets carguen bien en el WebView.
+
+Para una build “de tienda”, define las mismas variables `VITE_*` que en Netlify (API, Sentry, etc.) en el entorno desde el que ejecutas `npm run build`, o usa `.env.production` / `.env.production.local`.
+
 ---
 
 ## Hacia producción y uso por otras personas

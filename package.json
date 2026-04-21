@@ -11,9 +11,14 @@
     "test": "vitest run",
     "sync:ingredient-fixture": "node scripts/sync-ingredient-fixture.mjs",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cap:sync": "npm run build && npx cap sync",
+    "cap:open:android": "npx cap open android"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.1",
+    "@capacitor/cli": "^8.3.1",
+    "@capacitor/core": "^8.3.1",
     "@navi01/react": "^0.1.4",
     "@netlify/blobs": "^8.1.0",
     "@sentry/react": "^10.49.0",
