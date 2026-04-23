@@ -83,6 +83,9 @@ export function WeeklyDiet({
   onLoadSlotAlternatives,
   onFetchAllMealsCatalog,
   onRefreshPlan,
+  dailyEngagement,
+  onSaveDailyEngagement,
+  onTrackEvent,
 }: WeeklyDietProps) {
   const { summary, loadSummary } = useNutritionApi(accessToken)
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
@@ -1000,6 +1003,9 @@ export function WeeklyDiet({
           planPortionsTotal={planDailyTotals.portions}
           adjustedPortionsToday={adjustedPortionsToday}
           onScrollToMeal={scrollToMealCard}
+          dailyEngagement={dailyEngagement}
+          onSaveDailyEngagement={onSaveDailyEngagement}
+          onTrackEvent={onTrackEvent}
         />
       )}
 
@@ -1116,6 +1122,11 @@ export function WeeklyDiet({
                     hasSuggestedMealOverride={Boolean(savedMealOverrides[cardId])}
                     saveState={slotSaveStates[cardId]}
                     onApplySuggestedMeal={(match) => {
+                      void onTrackEvent?.('suggested_meal_applied', {
+                        slotId: cardId,
+                        mealId: match.meal.id,
+                        mealName: match.meal.nombre,
+                      })
                       const aligned = fillMissingGroupPortionsFromTargets(
                         alignMealPortionsToGroupTargets(match.meal, match.targetPortions),
                         match.targetPortions

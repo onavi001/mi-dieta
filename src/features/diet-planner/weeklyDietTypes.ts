@@ -1,5 +1,5 @@
 import type { Comida, TipoComida } from '@/types/domain'
-import type { CombinedSlot, DietSlot, WeekState, WeekStatePatch } from '@/hooks/useDietApi'
+import type { CombinedSlot, DailyEngagement, DietSlot, WeekState, WeekStatePatch } from '@/hooks/useDietApi'
 import type { PlanGroupKey } from '@/data/reference/ingredientReference'
 
 export interface WeeklyDietProps {
@@ -23,6 +23,9 @@ export interface WeeklyDietProps {
   /** Catálogo completo del backend (GET /api/meals) para sugerencias locales cuando no hay alternativas del plan. */
   onFetchAllMealsCatalog?: () => Promise<Comida[]>
   onRefreshPlan?: () => Promise<unknown>
+  dailyEngagement?: DailyEngagement | null
+  onSaveDailyEngagement?: (next: DailyEngagement) => Promise<boolean>
+  onTrackEvent?: (event: string, context?: Record<string, unknown>) => Promise<boolean>
 }
 
 export interface LastAction {

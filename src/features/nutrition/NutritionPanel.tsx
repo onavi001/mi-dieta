@@ -41,6 +41,7 @@ import {
 type Props = {
   accessToken?: string
   onPlanSaved?: () => boolean | Promise<boolean>
+  onTrackEvent?: (event: string, context?: Record<string, unknown>) => Promise<boolean>
 }
 
 type FormMode = 'basico' | 'avanzado'
@@ -378,7 +379,7 @@ function buildProfessionalDietByMeal(
   })
 }
 
-export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
+export function NutritionPanel({ accessToken, onPlanSaved, onTrackEvent }: Props) {
   const {
     loading,
     saving,
@@ -405,6 +406,7 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
   })
 
   const openOnlyStep = useCallback((step: StepName) => {
+    void onTrackEvent?.('nutri_step_opened', { step })
     setCollapsed({
       profile: step === 'profile',
       plan: step === 'plan',
@@ -426,7 +428,7 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
 
       stepEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, 140)
-  }, [])
+  }, [onTrackEvent])
 
   // Validación progresiva de pasos
   const hasProfile = summary?.nutritionProfile !== null && summary?.nutritionProfile !== undefined
@@ -479,6 +481,7 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
   }, [canAccessPlan, canAccessProgress, openOnlyStep])
 
   const handleBlockedStepClick = useCallback((step: number) => {
+    void onTrackEvent?.('nutri_step_blocked_click', { step })
     if (step === 2) {
       setBlockedStepHint('Completa y guarda el perfil para desbloquear el Paso 2.')
       return
@@ -488,7 +491,7 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
       return
     }
     setBlockedStepHint('')
-  }, [])
+  }, [onTrackEvent])
 
   useEffect(() => {
     if (!blockedStepHint) return

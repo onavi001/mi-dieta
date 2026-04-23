@@ -58,6 +58,16 @@ export interface WeekState {
 
 export type WeekStatePatch = Partial<WeekState> & { week?: string }
 
+export type DailyCheckinMood = 'good' | 'slip' | 'help'
+
+export interface DailyEngagement {
+  date: string | null
+  mood: DailyCheckinMood | null
+  streak: number
+  lastGoodDate: string | null
+  updatedAt: string | null
+}
+
 export type RawCombinedSlot = {
   slot?: unknown
   day?: unknown

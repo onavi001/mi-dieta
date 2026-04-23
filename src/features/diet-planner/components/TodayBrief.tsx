@@ -8,6 +8,7 @@ import {
   writeDailyCheckin,
   type DailyCheckinMood,
 } from '@/utils/dailyEngagement'
+import type { DailyEngagement } from '@/hooks/useDietApi'
 
 export type TodayBriefMeal = {
   slotId: string
@@ -28,6 +29,9 @@ type Props = {
   planPortionsTotal: number
   adjustedPortionsToday: number
   onScrollToMeal: (slotId: string) => void
+  dailyEngagement?: DailyEngagement | null
+  onSaveDailyEngagement?: (next: DailyEngagement) => Promise<boolean>
+  onTrackEvent?: (event: string, context?: Record<string, unknown>) => Promise<boolean>
 }
 
 function parseHourToMinutes(hour: string): number {
@@ -59,6 +63,9 @@ export function TodayBrief({
   planPortionsTotal,
   adjustedPortionsToday,
   onScrollToMeal,
+  dailyEngagement,
+  onSaveDailyEngagement,
+  onTrackEvent,
 }: Props) {
   const [checkin, setCheckin] = useState<DailyCheckinMood | null>(null)
   const [streak, setStreak] = useState(0)
@@ -66,9 +73,26 @@ export function TodayBrief({
   const dateKey = useMemo(() => localDateKey(), [])
 
   useEffect(() => {
+    void onTrackEvent?.('today_brief_viewed', {
+      mealCount: meals.length,
+      completedMeals: meals.filter((m) => m.completed).length,
+    })
+  }, [meals, onTrackEvent])
+
+  useEffect(() => {
     setCheckin(readDailyCheckin(dateKey))
     setStreak(readConsistencyStreak().count)
   }, [dateKey])
+
+  useEffect(() => {
+    if (!dailyEngagement) return
+    if (dailyEngagement.date === dateKey && dailyEngagement.mood) {
+      setCheckin(dailyEngagement.mood)
+    }
+    if (dailyEngagement.streak > 0) {
+      setStreak(dailyEngagement.streak)
+    }
+  }, [dailyEngagement, dateKey])
 
   const sortedMeals = useMemo(() => {
     return [...meals].sort((a, b) => parseHourToMinutes(a.hour) - parseHourToMinutes(b.hour))
@@ -97,12 +121,28 @@ export function TodayBrief({
     (mood: DailyCheckinMood) => {
       writeDailyCheckin(dateKey, mood)
       setCheckin(mood)
+      void onTrackEvent?.('today_brief_checkin', { mood })
       if (mood === 'good') {
         const next = bumpConsistencyStreakForGoodCheckin(dateKey)
         setStreak(next)
+        void onSaveDailyEngagement?.({
+          date: dateKey,
+          mood,
+          streak: next,
+          lastGoodDate: dateKey,
+          updatedAt: new Date().toISOString(),
+        })
+        return
       }
+      void onSaveDailyEngagement?.({
+        date: dateKey,
+        mood,
+        streak,
+        lastGoodDate: dailyEngagement?.lastGoodDate || null,
+        updatedAt: new Date().toISOString(),
+      })
     },
-    [dateKey]
+    [dailyEngagement?.lastGoodDate, dateKey, onSaveDailyEngagement, onTrackEvent, streak]
   )
 
   if (meals.length === 0) return null
@@ -153,7 +193,13 @@ export function TodayBrief({
           </p>
           <button
             type="button"
-            onClick={() => onScrollToMeal(nextMeal.slotId)}
+            onClick={() => {
+              void onTrackEvent?.('today_brief_go_to_meal_click', {
+                slotId: nextMeal.slotId,
+                mealName: nextMeal.nombre,
+              })
+              onScrollToMeal(nextMeal.slotId)
+            }}
             className="mt-2 w-full min-h-9 rounded-xl bg-emerald-600 text-white text-[11px] font-semibold active:bg-emerald-700"
           >
             Ir a esta comida

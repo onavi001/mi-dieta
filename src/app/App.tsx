@@ -75,6 +75,9 @@ export default function App() {
     replaceIngredient,
     updateGroceryState,
     syncWeekState,
+    dailyEngagement,
+    saveDailyEngagement,
+    trackEvent,
     weekState,
     fetchSlotAlternatives,
     fetchAllMealsCatalog,
@@ -689,6 +692,9 @@ export default function App() {
                 onLoadSlotAlternatives={fetchSlotAlternatives}
                 onFetchAllMealsCatalog={fetchAllMealsCatalog}
                 onRefreshPlan={refresh}
+                dailyEngagement={dailyEngagement}
+                onSaveDailyEngagement={saveDailyEngagement}
+                onTrackEvent={trackEvent}
               />
             )
             : tab === 'super'
@@ -705,7 +711,11 @@ export default function App() {
               )
               : (
                 <div className="px-4 py-4 space-y-4">
-                  <NutritionPanel accessToken={session.accessToken} onPlanSaved={handlePlanSaved} />
+                  <NutritionPanel
+                    accessToken={session.accessToken}
+                    onPlanSaved={handlePlanSaved}
+                    onTrackEvent={trackEvent}
+                  />
 
                   {canResetOwnData && (
                     <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-3 mb-12">

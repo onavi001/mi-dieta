@@ -10,6 +10,7 @@ import {
   type AuthPayload,
   type AuthProfile,
   type CombinedSlot,
+  type DailyEngagement,
   type RawCombinedSlot,
   type RawPlan,
   type ShareCandidate,
@@ -25,7 +26,7 @@ import {
 import { hydrateIngredientReference, isIngredientReferenceHydrated } from '../data/reference/ingredientReference'
 import { refreshStoredSession, SESSION_REFRESH_EVENT } from './dietApi/refreshStoredSession'
 
-export type { DietSlot, CombinedSlot, WeekPlan, WeekState, WeekStatePatch } from './dietApi/model'
+export type { DietSlot, CombinedSlot, WeekPlan, WeekState, WeekStatePatch, DailyEngagement, DailyCheckinMood } from './dietApi/model'
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
 const UNAUTHORIZED_EVENT = 'mi-dieta:unauthorized'
@@ -47,6 +48,8 @@ function getDietRequestLabel(path: string, method: HttpMethod): string {
   if (path.includes('/api/reference/ingredients')) return 'Cargando referencia de ingredientes...'
   if (path.includes('/api/plans/my')) return 'Cargando plan semanal...'
   if (path.includes('/api/users/me/profile')) return 'Cargando perfil...'
+  if (path.includes('/api/users/me/daily-engagement')) return 'Sincronizando progreso diario...'
+  if (path.includes('/api/users/me/events')) return 'Registrando evento...'
   if (path.includes('/api/users/me/reset-data')) return 'Eliminando tus datos...'
   if (path.includes('/api/shares/search')) return 'Buscando usuarios para compartir...'
   if (path.includes('/api/shares/invites') && method === 'POST') return 'Enviando invitacion...'
@@ -82,6 +85,7 @@ export function useDietApi() {
   const [outgoingInvites, setOutgoingInvites] = useState<ShareInvite[]>([])
   const [selectedShareUserId, setSelectedShareUserId] = useState<string>('')
   const [viewMode, setViewMode] = useState<'my' | 'combined'>('my')
+  const [dailyEngagement, setDailyEngagement] = useState<DailyEngagement | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
   const [isBootstrapped, setIsBootstrapped] = useState(false)
@@ -100,6 +104,7 @@ export function useDietApi() {
     setOutgoingInvites([])
     setSelectedShareUserId('')
     setViewMode('my')
+    setDailyEngagement(null)
   }, [])
 
   const request = useCallback(async <T>(
@@ -381,6 +386,12 @@ export function useDietApi() {
     setProfile(data.profile)
   }, [api])
 
+  const loadDailyEngagement = useCallback(async () => {
+    const data = await api.loadDailyEngagement()
+    setDailyEngagement(data.dailyEngagement || null)
+    return data.dailyEngagement || null
+  }, [api])
+
   const loadCombinedPlan = useCallback(async () => {
     if (!selectedShareUserId || viewMode !== 'combined') {
       setCombinedSlots([])
@@ -443,12 +454,12 @@ export function useDietApi() {
     }
 
     await runWithLoading(async () => {
-      await Promise.all([loadProfile(), loadMyPlan(), loadShareUsers(), loadInvites(), loadIngredientReference()])
+      await Promise.all([loadProfile(), loadMyPlan(), loadShareUsers(), loadInvites(), loadIngredientReference(), loadDailyEngagement()])
       return true
     }, 'Error al cargar datos')
 
     setIsBootstrapped(true)
-  }, [loadIngredientReference, loadInvites, loadMyPlan, loadProfile, loadShareUsers, runWithLoading, session?.accessToken])
+  }, [loadDailyEngagement, loadIngredientReference, loadInvites, loadMyPlan, loadProfile, loadShareUsers, runWithLoading, session?.accessToken])
 
   useEffect(() => {
     bootstrap()
@@ -611,6 +622,25 @@ export function useDietApi() {
     }
   }, [api, applyPlanPayload, plan?.week])
 
+  const saveDailyEngagement = useCallback(async (next: DailyEngagement) => {
+    try {
+      const data = await api.updateDailyEngagement(next)
+      setDailyEngagement(data.dailyEngagement || next)
+      return true
+    } catch {
+      return false
+    }
+  }, [api])
+
+  const trackEvent = useCallback(async (event: string, context?: Record<string, unknown>) => {
+    try {
+      await api.trackEvent(event, context)
+      return true
+    } catch {
+      return false
+    }
+  }, [api])
+
   const activeSlots = useMemo(() => {
     if (viewMode !== 'combined') {
       return plan?.slots || []
@@ -688,6 +718,7 @@ export function useDietApi() {
     },
     session,
     profile,
+    dailyEngagement,
     plan,
     weekState: plan?.weekState ?? null,
     activeSlots,
@@ -703,5 +734,8 @@ export function useDietApi() {
     ...shareActions,
     ...authActions,
     ...planActions,
+    loadDailyEngagement,
+    saveDailyEngagement,
+    trackEvent,
   }
 }

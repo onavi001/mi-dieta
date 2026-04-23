@@ -9,6 +9,7 @@ import type {
   ShareInvite,
   ShareUser,
   WeekStatePatch,
+  DailyEngagement,
 } from './model'
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE'
@@ -26,6 +27,11 @@ export function createDietApiClient(request: DietApiRequest) {
     logout: () => request('/api/auth/logout', 'POST'),
 
     loadProfile: () => request<{ profile: AuthProfile }>('/api/users/me/profile'),
+    loadDailyEngagement: () => request<{ dailyEngagement: DailyEngagement | null }>('/api/users/me/daily-engagement'),
+    updateDailyEngagement: (dailyEngagement: DailyEngagement) =>
+      request<{ dailyEngagement: DailyEngagement | null }>('/api/users/me/daily-engagement', 'PUT', { dailyEngagement }),
+    trackEvent: (event: string, context?: Record<string, unknown>) =>
+      request<{ tracked: boolean }>('/api/users/me/events', 'POST', { event, context }),
     resetMyData: () => request<{ reset: boolean }>('/api/users/me/reset-data', 'POST', {}),
 
     loadMealsCatalog: (tipo?: string) =>
