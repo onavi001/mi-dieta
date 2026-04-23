@@ -439,19 +439,24 @@ export function WeeklyDiet({
       next.add(slotId)
       return next
     })
-    setTimeout(() => {
+
+    const doScroll = (attempt = 0) => {
       const el = document.getElementById(`meal-card-${slotId}`)
-      if (!el) return
-      const scrollContainer = el.closest('.overflow-y-auto')
-      if (scrollContainer instanceof HTMLElement) {
-        scrollContainer.scrollTo({
-          top: Math.max(el.offsetTop - 12, 0),
-          behavior: 'smooth',
-        })
+      if (!el) {
+        if (attempt < 4) {
+          setTimeout(() => doScroll(attempt + 1), 120)
+        }
         return
       }
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, 120)
+
+      // More reliable across nested mobile containers than manual top math.
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+
+    // Wait for expand layout before first try.
+    setTimeout(() => {
+      requestAnimationFrame(() => doScroll(0))
+    }, 160)
   }, [])
 
   const selectedMealsPerDay = useMemo(() => {
@@ -817,9 +822,9 @@ export function WeeklyDiet({
     })
   }
 
-  const autoAdjustDayToPlan = (day: string) => {
+  const autoAdjustDayToPlan = async (day: string): Promise<boolean> => {
     const dayMeals = meals.filter((meal) => meal.day === day)
-    if (dayMeals.length === 0) return
+    if (dayMeals.length === 0) return false
 
     const affectedKeys = new Set<string>()
     for (const meal of dayMeals) {
@@ -892,15 +897,15 @@ export function WeeklyDiet({
 
     const daySlotIds = dayMeals.map((meal) => meal.slotId)
     setSlotSaveState(daySlotIds, 'saving')
-    void Promise.resolve(onSyncWeekState?.({ ingredientMultipliers: nextOverridesSnapshot })).then((saved) => {
-      if (saved) {
-        showSaveFeedback('Ajustes guardados')
-        setSlotSaveState(daySlotIds, 'saved', 1600)
-      } else if (onSyncWeekState) {
-        showSaveError('No se pudieron guardar los ajustes')
-        setSlotSaveState(daySlotIds, 'error', 2400)
-      }
-    })
+    const saved = await Promise.resolve(onSyncWeekState?.({ ingredientMultipliers: nextOverridesSnapshot }))
+    if (saved) {
+      showSaveFeedback('Ajustes guardados')
+      setSlotSaveState(daySlotIds, 'saved', 1600)
+    } else if (onSyncWeekState) {
+      showSaveError('No se pudieron guardar los ajustes')
+      setSlotSaveState(daySlotIds, 'error', 2400)
+      return false
+    }
 
     setLastAutoAdjustSnapshotByDay((prev) => ({
       ...prev,
@@ -909,6 +914,7 @@ export function WeeklyDiet({
 
     setAutoAdjustMessage(`Ajuste aplicado para ${day}. Revisa el detalle por grupo y repite si hace falta afinar.`)
     triggerHaptic('success')
+    return true
   }
 
   const revertAutoAdjustDay = (day: string) => {
@@ -1006,6 +1012,9 @@ export function WeeklyDiet({
           dailyEngagement={dailyEngagement}
           onSaveDailyEngagement={onSaveDailyEngagement}
           onTrackEvent={onTrackEvent}
+          onApplyRescue={() => {
+            return autoAdjustDayToPlan(today)
+          }}
         />
       )}
 

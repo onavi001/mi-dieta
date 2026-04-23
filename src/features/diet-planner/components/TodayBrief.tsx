@@ -32,6 +32,7 @@ type Props = {
   dailyEngagement?: DailyEngagement | null
   onSaveDailyEngagement?: (next: DailyEngagement) => Promise<boolean>
   onTrackEvent?: (event: string, context?: Record<string, unknown>) => Promise<boolean>
+  onApplyRescue?: () => boolean | Promise<boolean>
 }
 
 function parseHourToMinutes(hour: string): number {
@@ -66,9 +67,12 @@ export function TodayBrief({
   dailyEngagement,
   onSaveDailyEngagement,
   onTrackEvent,
+  onApplyRescue,
 }: Props) {
   const [checkin, setCheckin] = useState<DailyCheckinMood | null>(null)
   const [streak, setStreak] = useState(0)
+  const [rescueApplying, setRescueApplying] = useState(false)
+  const [rescueFeedback, setRescueFeedback] = useState('')
   const viewedEventSentRef = useRef<string | null>(null)
 
   const dateKey = useMemo(() => localDateKey(), [])
@@ -96,6 +100,12 @@ export function TodayBrief({
       setStreak(dailyEngagement.streak)
     }
   }, [dailyEngagement, dateKey])
+
+  useEffect(() => {
+    if (!rescueFeedback) return
+    const timer = setTimeout(() => setRescueFeedback(''), 2200)
+    return () => clearTimeout(timer)
+  }, [rescueFeedback])
 
   const sortedMeals = useMemo(() => {
     return [...meals].sort((a, b) => parseHourToMinutes(a.hour) - parseHourToMinutes(b.hour))
@@ -213,6 +223,33 @@ export function TodayBrief({
       {rescue && (
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 mb-3">
           <p className="text-[11px] text-amber-900 leading-snug">{rescue}</p>
+          {onApplyRescue && (
+            <button
+              type="button"
+              disabled={rescueApplying}
+              onClick={async () => {
+                setRescueApplying(true)
+                void onTrackEvent?.('today_brief_rescue_apply_click', {
+                  rescueKind: 'auto_adjust_day',
+                })
+                const ok = await Promise.resolve(onApplyRescue())
+                setRescueFeedback(ok ? 'Rescate aplicado. Revisa impacto diario.' : 'No se pudo aplicar rescate.')
+                void onTrackEvent?.('today_brief_rescue_apply_result', {
+                  rescueKind: 'auto_adjust_day',
+                  ok: Boolean(ok),
+                })
+                setRescueApplying(false)
+              }}
+              className="mt-2 w-full min-h-9 rounded-xl bg-amber-600 text-white text-[11px] font-semibold active:bg-amber-700 disabled:opacity-60"
+            >
+              {rescueApplying ? 'Aplicando rescate...' : 'Aplicar rescate al resto del dia'}
+            </button>
+          )}
+          {rescueFeedback && (
+            <p className={`text-[10px] mt-2 ${rescueFeedback.startsWith('No se') ? 'text-rose-700' : 'text-emerald-700'}`}>
+              {rescueFeedback}
+            </p>
+          )}
         </div>
       )}
 

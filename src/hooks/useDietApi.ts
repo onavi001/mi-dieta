@@ -113,7 +113,10 @@ export function useDietApi() {
     body?: unknown,
     tokenOverride?: string
   ): Promise<T> => {
-    const endRequest = startApiRequest(getDietRequestLabel(path, method))
+    const isBackgroundEventTrack = path.includes('/api/users/me/events')
+    const endRequest = isBackgroundEventTrack
+      ? () => {}
+      : startApiRequest(getDietRequestLabel(path, method))
 
     const skipRefreshOn401 =
       path.includes('/api/auth/login') ||
