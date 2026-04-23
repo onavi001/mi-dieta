@@ -69,13 +69,13 @@ export function TodayBrief({
   onTrackEvent,
   onApplyRescue,
 }: Props) {
-  const [checkin, setCheckin] = useState<DailyCheckinMood | null>(null)
-  const [streak, setStreak] = useState(0)
-  const [rescueApplying, setRescueApplying] = useState(false)
-  const [rescueFeedback, setRescueFeedback] = useState('')
   const viewedEventSentRef = useRef<string | null>(null)
 
   const dateKey = useMemo(() => localDateKey(), [])
+  const [checkin, setCheckin] = useState<DailyCheckinMood | null>(() => readDailyCheckin(dateKey))
+  const [streak, setStreak] = useState(() => readConsistencyStreak().count)
+  const [rescueApplying, setRescueApplying] = useState(false)
+  const [rescueFeedback, setRescueFeedback] = useState('')
 
   useEffect(() => {
     if (viewedEventSentRef.current === dateKey) return
@@ -86,20 +86,19 @@ export function TodayBrief({
     })
   }, [dateKey, meals, onTrackEvent])
 
-  useEffect(() => {
-    setCheckin(readDailyCheckin(dateKey))
-    setStreak(readConsistencyStreak().count)
-  }, [dateKey])
+  const effectiveCheckin = useMemo(() => {
+    if (dailyEngagement?.date === dateKey && dailyEngagement?.mood) {
+      return dailyEngagement.mood
+    }
+    return checkin
+  }, [checkin, dailyEngagement, dateKey])
 
-  useEffect(() => {
-    if (!dailyEngagement) return
-    if (dailyEngagement.date === dateKey && dailyEngagement.mood) {
-      setCheckin(dailyEngagement.mood)
+  const effectiveStreak = useMemo(() => {
+    if (typeof dailyEngagement?.streak === 'number' && dailyEngagement.streak > 0) {
+      return dailyEngagement.streak
     }
-    if (dailyEngagement.streak > 0) {
-      setStreak(dailyEngagement.streak)
-    }
-  }, [dailyEngagement, dateKey])
+    return streak
+  }, [dailyEngagement, streak])
 
   useEffect(() => {
     if (!rescueFeedback) return
@@ -167,9 +166,9 @@ export function TodayBrief({
           <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-800">Hoy en 30 segundos</p>
           <p className="text-sm font-bold text-gray-900 leading-tight mt-0.5">Tu día, en claro</p>
         </div>
-        {streak > 0 && (
+        {effectiveStreak > 0 && (
           <span className="shrink-0 text-[10px] font-bold text-amber-900 bg-amber-100 border border-amber-200 rounded-full px-2.5 py-1">
-            Racha {streak}d
+            Racha {effectiveStreak}d
           </span>
         )}
       </div>
@@ -260,7 +259,7 @@ export function TodayBrief({
             type="button"
             onClick={() => handleCheckin('good')}
             className={`min-h-10 rounded-lg text-[10px] font-semibold border ${
-              checkin === 'good' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-800 border-gray-300 active:bg-gray-100'
+              effectiveCheckin === 'good' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-800 border-gray-300 active:bg-gray-100'
             }`}
           >
             Voy bien
@@ -269,7 +268,7 @@ export function TodayBrief({
             type="button"
             onClick={() => handleCheckin('slip')}
             className={`min-h-10 rounded-lg text-[10px] font-semibold border ${
-              checkin === 'slip' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-800 border-gray-300 active:bg-gray-100'
+              effectiveCheckin === 'slip' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-800 border-gray-300 active:bg-gray-100'
             }`}
           >
             Me salí
@@ -278,18 +277,18 @@ export function TodayBrief({
             type="button"
             onClick={() => handleCheckin('help')}
             className={`min-h-10 rounded-lg text-[10px] font-semibold border ${
-              checkin === 'help' ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-gray-800 border-gray-300 active:bg-gray-100'
+              effectiveCheckin === 'help' ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-gray-800 border-gray-300 active:bg-gray-100'
             }`}
           >
             Ayuda
           </button>
         </div>
-        {checkin === 'help' && (
+        {effectiveCheckin === 'help' && (
           <p className="text-[10px] text-gray-600 mt-2 leading-snug">
             Abajo tienes tu plan del día. Si un grupo va alto, usa “Ajustar comidas y medidas al objetivo” en impacto diario.
           </p>
         )}
-        {checkin === 'slip' && (
+        {effectiveCheckin === 'slip' && (
           <p className="text-[10px] text-gray-600 mt-2 leading-snug">
             Sin culpa: sigue con la siguiente comida del plan. Un día no define tu semana.
           </p>
