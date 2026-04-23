@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { GroupStatus } from '../weeklyDietTypes'
 import {
   bumpConsistencyStreakForGoodCheckin,
@@ -69,15 +69,18 @@ export function TodayBrief({
 }: Props) {
   const [checkin, setCheckin] = useState<DailyCheckinMood | null>(null)
   const [streak, setStreak] = useState(0)
+  const viewedEventSentRef = useRef<string | null>(null)
 
   const dateKey = useMemo(() => localDateKey(), [])
 
   useEffect(() => {
+    if (viewedEventSentRef.current === dateKey) return
+    viewedEventSentRef.current = dateKey
     void onTrackEvent?.('today_brief_viewed', {
       mealCount: meals.length,
       completedMeals: meals.filter((m) => m.completed).length,
     })
-  }, [meals, onTrackEvent])
+  }, [dateKey, meals, onTrackEvent])
 
   useEffect(() => {
     setCheckin(readDailyCheckin(dateKey))
