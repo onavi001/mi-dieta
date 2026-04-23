@@ -1,7 +1,12 @@
 /**
- * Datos de referencia de ingredientes: se cargan desde el API (`GET /api/reference/ingredients`)
- * y se hidratan al iniciar la app (y en tests desde `src/test/fixtures`).
+ * Datos de referencia de ingredientes: la fuente de verdad es el API (`GET /api/reference/ingredients`).
+ * Si falla la red, se usa `ingredientReference.bundle.json` (exportado desde el API).
  */
+
+import ingredientReferenceBundle from './ingredientReference.bundle.json'
+import type { IngredientPortionProfile } from './ingredientPortionProfiles'
+import { hydrateHumanPortionProfiles } from './ingredientPortionProfiles'
+import { normalizeIngredientText } from './ingredientNormalize'
 
 export type PlanGroupKey =
   | 'verduras'
@@ -31,6 +36,7 @@ export type IngredientReferencePayload = {
   groupGramsPerPortion: Record<PlanGroupKey, number>
   groupLabels: Record<PlanGroupKey, string>
   unitAliases: Record<string, string>
+  humanPortionProfiles?: IngredientPortionProfile[]
 }
 
 const EMPTY_GRAMS: Record<PlanGroupKey, number> = {
@@ -75,25 +81,41 @@ export function isIngredientReferenceHydrated(): boolean {
   return hydrated
 }
 
-export function hydrateIngredientReference(data: IngredientReferencePayload): void {
+export function resetIngredientReference(): void {
+  INGREDIENT_REFERENCE = {}
+  INGREDIENT_GROUP_KEYWORDS = { ...EMPTY_KEYWORDS }
+  GROUP_GRAMS_PER_PORTION = { ...EMPTY_GRAMS }
+  GROUP_LABELS = { ...EMPTY_LABELS }
+  unitAliasesInternal = {}
+  hydrated = false
+  hydrateHumanPortionProfiles(undefined)
+}
+
+function applyPayload(data: IngredientReferencePayload): void {
   INGREDIENT_REFERENCE = data.items
   INGREDIENT_GROUP_KEYWORDS = data.groupKeywords
   GROUP_GRAMS_PER_PORTION = data.groupGramsPerPortion
   GROUP_LABELS = data.groupLabels
   unitAliasesInternal = data.unitAliases
+  hydrateHumanPortionProfiles(data.humanPortionProfiles)
   hydrated = true
 }
 
-export function normalizeIngredientText(value: string): string {
-  return value
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
+/** Catálogo empaquetado con la última exportación del API (offline / error de red). */
+export function hydrateIngredientReferenceFallback(): void {
+  applyPayload(ingredientReferenceBundle as IngredientReferencePayload)
 }
+
+export function hydrateIngredientReference(data: IngredientReferencePayload): void {
+  applyPayload(data)
+}
+
+export { normalizeIngredientText }
 
 export function normalizeIngredientUnit(value: string): string {
   const key = normalizeIngredientText(value).replace(/\./g, '')
   return unitAliasesInternal[key] || key
 }
+
+/** Primer paint y tests: bundle exportado desde el API hasta que llegue la respuesta en vivo. */
+hydrateIngredientReferenceFallback()

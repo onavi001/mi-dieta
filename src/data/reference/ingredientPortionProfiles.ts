@@ -1,4 +1,4 @@
-import { normalizeIngredientText } from './ingredientReference'
+import { normalizeIngredientText } from './ingredientNormalize'
 
 export type HumanPortionUnit = 'g' | 'ml' | 'piece' | 'slice' | 'cup' | 'tbsp' | 'tsp'
 
@@ -12,7 +12,8 @@ export type IngredientPortionProfile = {
   maxUsefulAmount: number
 }
 
-const PROFILES: IngredientPortionProfile[] = [
+/** Perfiles por defecto si el payload del API no trae lista (tests / arranque mínimo). */
+const DEFAULT_PROFILES: IngredientPortionProfile[] = [
   {
     ingredientId: 'pan integral',
     aliases: ['pan de caja integral', 'pan de caja', 'pan bimbo integral'],
@@ -23,8 +24,8 @@ const PROFILES: IngredientPortionProfile[] = [
     maxUsefulAmount: 4,
   },
   {
-    ingredientId: 'tortilla maiz',
-    aliases: ['tortilla de maiz', 'tortilla'],
+    ingredientId: 'tortilla de maiz',
+    aliases: ['tortilla maiz', 'tortilla'],
     defaultUnit: 'piece',
     unitGrams: 25,
     allowedSteps: [1, 2, 3, 4, 5],
@@ -58,7 +59,7 @@ const PROFILES: IngredientPortionProfile[] = [
   },
   {
     ingredientId: 'yogurt',
-    aliases: ['yogur'],
+    aliases: ['yogur', 'yogurt griego', 'yogurt natural', 'yogurt bajo en grasa'],
     defaultUnit: 'cup',
     unitGrams: 245,
     allowedSteps: [0.25, 0.5, 0.75, 1, 1.25],
@@ -67,12 +68,38 @@ const PROFILES: IngredientPortionProfile[] = [
   },
 ]
 
-const profileByKey = new Map<string, IngredientPortionProfile>()
-for (const profile of PROFILES) {
-  profileByKey.set(normalizeIngredientText(profile.ingredientId), profile)
-  for (const alias of profile.aliases || []) {
-    profileByKey.set(normalizeIngredientText(alias), profile)
+let profileByKey = new Map<string, IngredientPortionProfile>()
+
+function rebuildIndex(profiles: IngredientPortionProfile[]): void {
+  const next = new Map<string, IngredientPortionProfile>()
+  for (const profile of profiles) {
+    next.set(normalizeIngredientText(profile.ingredientId), profile)
+    for (const alias of profile.aliases || []) {
+      next.set(normalizeIngredientText(alias), profile)
+    }
   }
+  profileByKey = next
+}
+
+rebuildIndex(DEFAULT_PROFILES)
+
+/**
+ * Combina perfiles del API con los por defecto (el API gana por `ingredientId` normalizado).
+ */
+export function hydrateHumanPortionProfiles(fromApi: IngredientPortionProfile[] | undefined): void {
+  if (!fromApi || fromApi.length === 0) {
+    rebuildIndex(DEFAULT_PROFILES)
+    return
+  }
+
+  const byCanon = new Map<string, IngredientPortionProfile>()
+  for (const p of DEFAULT_PROFILES) {
+    byCanon.set(normalizeIngredientText(p.ingredientId), p)
+  }
+  for (const p of fromApi) {
+    byCanon.set(normalizeIngredientText(p.ingredientId), p)
+  }
+  rebuildIndex([...byCanon.values()])
 }
 
 export function findIngredientPortionProfile(ingredientId: string, presentacion = ''): IngredientPortionProfile | null {

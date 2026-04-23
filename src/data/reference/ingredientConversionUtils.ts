@@ -2,11 +2,11 @@ import {
   GROUP_GRAMS_PER_PORTION,
   INGREDIENT_GROUP_KEYWORDS,
   INGREDIENT_REFERENCE,
-  normalizeIngredientText,
   normalizeIngredientUnit,
   type IngredientReference,
   type PlanGroupKey,
 } from './ingredientReference'
+import { normalizeIngredientText } from './ingredientNormalize'
 
 export function getIngredientReference(ingredientId: string): IngredientReference | null {
   const key = normalizeIngredientText(ingredientId)

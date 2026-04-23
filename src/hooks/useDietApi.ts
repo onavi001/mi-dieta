@@ -23,7 +23,12 @@ import {
   readStoredSession,
   writeStoredSession,
 } from './dietApi/model'
-import { hydrateIngredientReference, isIngredientReferenceHydrated } from '../data/reference/ingredientReference'
+import {
+  hydrateIngredientReference,
+  hydrateIngredientReferenceFallback,
+  isIngredientReferenceHydrated,
+  resetIngredientReference,
+} from '../data/reference/ingredientReference'
 import { refreshStoredSession, SESSION_REFRESH_EVENT } from './dietApi/refreshStoredSession'
 
 export type { DietSlot, CombinedSlot, WeekPlan, WeekState, WeekStatePatch, DailyEngagement, DailyCheckinMood } from './dietApi/model'
@@ -105,6 +110,7 @@ export function useDietApi() {
     setSelectedShareUserId('')
     setViewMode('my')
     setDailyEngagement(null)
+    resetIngredientReference()
   }, [])
 
   const request = useCallback(async <T>(
@@ -258,9 +264,15 @@ export function useDietApi() {
   }, [api])
 
   const loadIngredientReference = useCallback(async () => {
-    if (isIngredientReferenceHydrated()) return
-    const data = await api.loadIngredientReference()
-    hydrateIngredientReference(data)
+    if (!isIngredientReferenceHydrated()) {
+      hydrateIngredientReferenceFallback()
+    }
+    try {
+      const data = await api.loadIngredientReference()
+      hydrateIngredientReference(data)
+    } catch {
+      /* Mantiene bundle ya cargado o datos API previos si existían. */
+    }
   }, [api])
 
   const fetchSlotAlternatives = useCallback(async (slotId: string, currentMealId: string | null): Promise<Comida[]> => {

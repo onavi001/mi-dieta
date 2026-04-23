@@ -10,6 +10,7 @@
     "build:report": "npm run build && node scripts/report-bundle.mjs",
     "test": "vitest run",
     "sync:ingredient-fixture": "node scripts/sync-ingredient-fixture.mjs",
+    "sync:ingredient-reference-bundle": "node ../mi-dieta-api/scripts/export-frontend-ingredient-reference-bundle.js",
     "lint": "eslint .",
     "preview": "vite preview",
     "cap:sync": "npm run build && npx cap sync",
