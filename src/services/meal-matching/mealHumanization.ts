@@ -25,7 +25,8 @@ function asHumanAmount(grams: number, unit: HumanPortionUnit, unitGrams?: number
   return grams / unitGrams
 }
 
-function toIngredientQty(amount: number, unit: HumanPortionUnit, unitGrams?: number): { cantidad: number; unidad: string } {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function toIngredientQty(amount: number, unit: HumanPortionUnit, _unitGrams?: number): { cantidad: number; unidad: string } {
   if (unit === 'g' || unit === 'ml') {
     return { cantidad: Math.max(1, Math.round(amount)), unidad: unit }
   }

@@ -1,5 +1,4 @@
 import {
-  GROUP_GRAMS_PER_PORTION,
   type PlanGroupKey,
 } from '../../data/reference/ingredientReference'
 import {
