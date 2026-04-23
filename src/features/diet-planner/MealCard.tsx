@@ -7,6 +7,7 @@ import { MealCardConversionModal } from './meal-card/MealCardConversionModal'
 import { MealCardIngredientPopup, type IngredientPopupState } from './meal-card/MealCardIngredientPopup'
 import { MealCardSuggestedAlternativesModal } from './meal-card/MealCardSuggestedAlternativesModal'
 import { portionStatusSurfaceClasses } from './meal-card/mealCardStyles'
+import { convertAmountToHumanHint } from '@/services/meal-matching/mealHumanization'
 
 export function MealCard({
   comida,
@@ -245,6 +246,7 @@ export function MealCard({
                   const multiplier = getIngredientMultiplier(slotId, ing.id, idx)
                   const effectiveAmount = ing.cantidad * mealPortionFactor * multiplier
                   const isModified = multiplier !== 1
+                  const humanHint = convertAmountToHumanHint(ing, effectiveAmount, ing.unidad)
 
                   return (
                     <li
@@ -287,6 +289,11 @@ export function MealCard({
                           ⚙ Editar
                         </button>
                       </div>
+                      {humanHint && (
+                        <p className="mt-1 text-[10px] text-gray-500 truncate">
+                          Equiv: {humanHint}
+                        </p>
+                      )}
                     </li>
                   )
                 })}

@@ -4,6 +4,7 @@ import {
 } from '../../data/reference/ingredientReference'
 import {
   detectIngredientGroup,
+  gramsPerPortionForIngredient,
   ingredientToEstimatedGrams,
 } from '../../data/reference/ingredientConversionUtils'
 import type { Comida, MealGroupPortions, MealIngredient } from '../../types/domain'
@@ -77,7 +78,11 @@ export function estimateMealGroupPortions(meal: Comida): Record<PlanGroupKey, nu
     if (!group) continue
 
     const grams = ingredientToEstimatedGrams(ingredient, group)
-    const gramsPerPortion = GROUP_GRAMS_PER_PORTION[group]
+    const gramsPerPortion = gramsPerPortionForIngredient(
+      group,
+      ingredient.id,
+      `${ingredient.id} ${ingredient.presentacion || ''}`
+    )
     if (!Number.isFinite(grams) || grams <= 0 || gramsPerPortion <= 0) continue
 
     estimated[group] += grams / gramsPerPortion
@@ -298,11 +303,12 @@ export function fillMissingGroupPortionsFromTargets(meal: Comida, targets: MealG
     if (c >= t - TARGET_NEAR_EPS) continue
     const deficit = t - c
     if (deficit <= 0.05) continue
-    const grams = deficit * GROUP_GRAMS_PER_PORTION[group]
+    const baseIngredientId = PLAN_GROUP_BASE_INGREDIENT_ID[group]
+    const grams = deficit * gramsPerPortionForIngredient(group, baseIngredientId, baseIngredientId)
     if (grams < MIN_ADD_GRAMS) continue
 
     additions.push({
-      id: PLAN_GROUP_BASE_INGREDIENT_ID[group],
+      id: baseIngredientId,
       presentacion: `Ajuste automático del plan (${group})`,
       cantidad: Math.max(1, Math.round(grams)),
       unidad: 'g',

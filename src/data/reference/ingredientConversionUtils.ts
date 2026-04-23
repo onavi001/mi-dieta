@@ -1,4 +1,5 @@
 import {
+  GROUP_GRAMS_PER_PORTION,
   INGREDIENT_GROUP_KEYWORDS,
   INGREDIENT_REFERENCE,
   normalizeIngredientText,
@@ -70,4 +71,39 @@ export function ingredientToEstimatedGrams(
   }
 
   return ingredient.cantidad * factor
+}
+
+const PROTEIN_PORTION_GRAMS_KEYWORDS: Array<{ grams: number; keywords: string[] }> = [
+  { grams: 35, keywords: ['salmon', 'atun', 'tuna', 'pescado', 'tilapia', 'camaron', 'sardina', 'bacalao'] },
+  { grams: 30, keywords: ['pollo', 'pavo', 'res', 'cerdo', 'carne molida', 'lomo'] },
+  { grams: 45, keywords: ['queso panela', 'queso cottage', 'queso fresco', 'queso oaxaca'] },
+  { grams: 50, keywords: ['huevo', 'claras', 'tofu', 'tempeh'] },
+]
+
+/**
+ * Gramos que representan 1 porción para un ingrediente específico.
+ * - Si el catálogo lo define (portionGramEquivalent), se usa tal cual.
+ * - En proteína, aplica heurísticas para diferenciar carnes/pescados/huevo/quesos.
+ * - Si no hay regla específica, usa el estándar del grupo.
+ */
+export function gramsPerPortionForIngredient(
+  group: PlanGroupKey,
+  ingredientId: string,
+  ingredientText = ''
+): number {
+  const explicit = getIngredientReference(ingredientId)
+  if (explicit?.portionGramEquivalent && explicit.portionGramEquivalent > 0) {
+    return explicit.portionGramEquivalent
+  }
+
+  if (group === 'proteina_animal_o_alternativas') {
+    const normalized = normalizeIngredientText(`${ingredientId} ${ingredientText}`)
+    for (const rule of PROTEIN_PORTION_GRAMS_KEYWORDS) {
+      if (rule.keywords.some((keyword) => normalized.includes(keyword))) {
+        return rule.grams
+      }
+    }
+  }
+
+  return GROUP_GRAMS_PER_PORTION[group]
 }

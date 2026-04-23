@@ -28,6 +28,7 @@ import {
   type MealMatchResult,
   type MealRankingPreferences,
 } from '@/services/meal-matching/mealCatalogMatching'
+import { humanizeMealIngredientAmounts } from '@/services/meal-matching/mealHumanization'
 import {
   filterAndSortMealsForProfile,
   mealPreferenceScore,
@@ -1136,10 +1137,10 @@ export function WeeklyDiet({
                         mealId: match.meal.id,
                         mealName: match.meal.nombre,
                       })
-                      const aligned = fillMissingGroupPortionsFromTargets(
+                      const aligned = humanizeMealIngredientAmounts(fillMissingGroupPortionsFromTargets(
                         alignMealPortionsToGroupTargets(match.meal, match.targetPortions),
                         match.targetPortions
-                      )
+                      ))
                       const nextIngredientMultipliers = stripIngredientKeysForSlot(portionOverrides, cardId)
                       setSavedMealOverride(cardId, aligned, { ingredientMultipliers: nextIngredientMultipliers })
                     }}

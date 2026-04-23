@@ -34,6 +34,20 @@ const balancedLunch: Comida = {
   },
 }
 
+const fishLunch: Comida = {
+  id: 'fish-lunch',
+  tipo: 'Comida',
+  nombre: 'Pescado con arroz',
+  receta: 'Mezclar',
+  tip: '',
+  tags: ['curated'],
+  forbiddenIngredients: [],
+  ingredientes: [
+    { id: 'pescado', presentacion: 'filete', cantidad: 90, unidad: 'g' },
+    { id: 'arroz blanco', presentacion: 'cocido', cantidad: 75, unidad: 'g' },
+  ],
+}
+
 const fruitSnack: Comida = {
   id: 'fruit-snack',
   tipo: 'Snack Tarde',
@@ -109,5 +123,13 @@ describe('mealCatalogMatching', () => {
     expect(portions.proteina_animal_o_alternativas).toBeCloseTo(1.5, 0.5)
     expect(portions.cereales_tuberculos).toBeCloseTo(1.5, 0.5)
     expect(portions.verduras).toBeCloseTo(2, 0.5)
+  })
+
+  it('applies ingredient-specific grams-per-portion for protein variants', () => {
+    const chickenPortions = estimateMealGroupPortionsFromIngredients(balancedLunch)
+    const fishPortions = estimateMealGroupPortionsFromIngredients(fishLunch)
+
+    // 90g chicken (~30g/portion) > 90g fish (~35g/portion).
+    expect(chickenPortions.proteina_animal_o_alternativas).toBeGreaterThan(fishPortions.proteina_animal_o_alternativas)
   })
 })

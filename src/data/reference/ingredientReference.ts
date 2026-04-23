@@ -15,6 +15,8 @@ export type PlanGroupKey =
 export type IngredientReference = {
   group: PlanGroupKey
   unitToGrams?: Record<string, number>
+  /** Gramos equivalentes a 1 porción para este ingrediente. */
+  portionGramEquivalent?: number
   pieceSizeGrams?: {
     small: number
     medium: number
