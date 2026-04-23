@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react'
 import type { MealRankingPreferences } from '@/services/meal-matching/mealCatalogMatching'
+import { onConsistencyStreakUpdated, readConsistencyStreak } from '@/utils/dailyEngagement'
 
 const CUISINE_TAGS = ['mexicana', 'casero', 'vegetal', 'snack'] as const
 
@@ -21,13 +23,28 @@ export function WeeklyDietProgressPanel({
   onToggleAvoidFish,
   autoAdjustMessage,
 }: Props) {
+  const [streakDays, setStreakDays] = useState(0)
+
+  useEffect(() => {
+    const refresh = () => setStreakDays(readConsistencyStreak().count)
+    refresh()
+    return onConsistencyStreakUpdated(refresh)
+  }, [completedToday])
+
   return (
     <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 shadow-sm">
       <div className="flex items-center justify-between mb-3">
         <p className="text-sm font-semibold text-gray-800">Progreso de hoy</p>
-        <span className="text-xs font-medium text-emerald-700 bg-emerald-50 rounded-full px-2.5 py-1">
-          {completedToday}/{todayMealCount || 0}
-        </span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {streakDays > 0 && (
+            <span className="text-[10px] font-bold text-amber-900 bg-amber-100 border border-amber-200 rounded-full px-2 py-0.5">
+              {streakDays}d
+            </span>
+          )}
+          <span className="text-xs font-medium text-emerald-700 bg-emerald-50 rounded-full px-2.5 py-1">
+            {completedToday}/{todayMealCount || 0}
+          </span>
+        </div>
       </div>
       <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-3">
         <div

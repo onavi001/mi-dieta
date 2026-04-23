@@ -59,6 +59,7 @@ import type {
 } from './weeklyDietTypes'
 import { WeeklyDietCombinedView } from './components/WeeklyDietCombinedView'
 import { WeeklyDietProgressPanel } from './components/WeeklyDietProgressPanel'
+import { TodayBrief } from './components/TodayBrief'
 
 const SWIPE_TRIGGER = SWIPE_TRIGGER_PX
 
@@ -420,6 +421,35 @@ export function WeeklyDiet({
       }
     })
   }
+
+  const todayImpactRows = useMemo(() => {
+    return dailyGroupImpact(todayMeals).map((row) => ({ label: row.label, status: row.status }))
+  }, [todayMeals, planPortionsByGroup, portionOverrides, distributionByMeal])
+
+  const adjustedPortionsToday = useMemo(() => {
+    return Number(dailyGroupImpact(todayMeals).reduce((acc, item) => acc + item.adjustedPortions, 0).toFixed(2))
+  }, [todayMeals, planPortionsByGroup, portionOverrides, distributionByMeal])
+
+  const scrollToMealCard = useCallback((slotId: string) => {
+    setExpandedCards((prev) => {
+      const next = new Set(prev)
+      next.add(slotId)
+      return next
+    })
+    setTimeout(() => {
+      const el = document.getElementById(`meal-card-${slotId}`)
+      if (!el) return
+      const scrollContainer = el.closest('.overflow-y-auto')
+      if (scrollContainer instanceof HTMLElement) {
+        scrollContainer.scrollTo({
+          top: Math.max(el.offsetTop - 12, 0),
+          behavior: 'smooth',
+        })
+        return
+      }
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 120)
+  }, [])
 
   const selectedMealsPerDay = useMemo(() => {
     const raw = Number(summary?.nutritionProfile?.meals_per_day || 5)
@@ -956,6 +986,22 @@ export function WeeklyDiet({
         }}
         autoAdjustMessage={autoAdjustMessage}
       />
+
+      {focusMode === 'today' && todayMeals.length > 0 && (
+        <TodayBrief
+          meals={todayMeals.map((meal) => ({
+            slotId: meal.slotId,
+            nombre: meal.nombre,
+            tipo: meal.tipo,
+            hour: meal.hour,
+            completed: meal.completed,
+          }))}
+          impactRows={todayImpactRows}
+          planPortionsTotal={planDailyTotals.portions}
+          adjustedPortionsToday={adjustedPortionsToday}
+          onScrollToMeal={scrollToMealCard}
+        />
+      )}
 
       {displayedDays.map((day) => {
         const dayMeals = meals.filter((meal) => meal.day === day)

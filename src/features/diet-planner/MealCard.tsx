@@ -57,7 +57,7 @@ export function MealCard({
   }
 
   return (
-    <div className="relative overflow-hidden rounded-2xl mb-3">
+    <div id={`meal-card-${slotId}`} className="relative overflow-hidden rounded-2xl mb-3 scroll-mt-4">
       <div className="absolute inset-0 bg-emerald-500/90 text-white text-xs font-semibold flex items-center pl-4">
         Completar
       </div>
