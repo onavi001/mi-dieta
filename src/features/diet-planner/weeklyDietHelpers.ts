@@ -31,6 +31,19 @@ export function makeIngredientKey(slotId: string, ingredientId: string, index: n
   return `${slotId}::${ingredientId}::${index}`
 }
 
+/** Quita ajustes manuales de cantidad asociados a un slot (p. ej. al cambiar de alternativa). */
+export function stripIngredientKeysForSlot(
+  prev: Record<string, number>,
+  slotId: string
+): Record<string, number> {
+  const prefix = `${slotId}::`
+  const next = { ...prev }
+  for (const key of Object.keys(next)) {
+    if (key.startsWith(prefix)) delete next[key]
+  }
+  return next
+}
+
 export function getGroupStatus(
   targetPortions: number,
   adjustedPortions: number

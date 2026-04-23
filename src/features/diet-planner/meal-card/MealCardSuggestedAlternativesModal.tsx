@@ -16,7 +16,7 @@ type Props = {
   onToggleShowAll: () => void
   onClose: () => void
   onClearSuggestedMeal?: () => void
-  onApplySuggestedMeal?: (meal: Comida) => void
+  onApplySuggestedMeal?: (match: MealMatchResult) => void
 }
 
 export function MealCardSuggestedAlternativesModal({
@@ -144,7 +144,7 @@ export function MealCardSuggestedAlternativesModal({
                     <button
                       type="button"
                       onClick={() => {
-                        onApplySuggestedMeal(item.meal)
+                        onApplySuggestedMeal(item)
                         onClose()
                       }}
                       className="w-full px-3 py-2.5 min-h-10 rounded-xl text-sm font-semibold bg-sky-600 text-white active:bg-sky-700"

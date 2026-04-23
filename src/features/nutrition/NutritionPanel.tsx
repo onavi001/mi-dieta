@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   useNutritionApi,
   type NutritionPlanVersionInput,
@@ -45,7 +45,7 @@ type Props = {
 
 type FormMode = 'basico' | 'avanzado'
 type MealDistributionForm = Record<DistributionKey, string>
-type StepName = 'profile' | 'plan' | 'portions' | 'progress'
+type StepName = 'profile' | 'plan' | 'progress'
 type CollapsibleState = Record<StepName, boolean>
 
 function toNumberOrUndefined(value: string): number | undefined {
@@ -394,22 +394,21 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
   } = useNutritionApi(accessToken)
 
   const [message, setMessage] = useState('')
+  const [blockedStepHint, setBlockedStepHint] = useState('')
   const [isGeneratingWeek, setIsGeneratingWeek] = useState(false)
   const [formMode, setFormMode] = useState<FormMode>('basico')
 
   const [collapsed, setCollapsed] = useState<CollapsibleState>({
-    profile: false,
-    plan: true,
-    portions: true,
-    progress: true,
+    profile: true,
+    plan: false,
+    progress: false,
   })
 
-  const openOnlyStep = (step: StepName) => {
+  const openOnlyStep = useCallback((step: StepName) => {
     setCollapsed({
-      profile: step !== 'profile',
-      plan: step !== 'plan',
-      portions: true,
-      progress: step !== 'progress',
+      profile: step === 'profile',
+      plan: step === 'plan',
+      progress: step === 'progress',
     })
 
     setTimeout(() => {
@@ -420,18 +419,14 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
       if (scrollContainer instanceof HTMLElement) {
         scrollContainer.scrollTo({
           top: Math.max(stepEl.offsetTop - 8, 0),
-          behavior: 'auto',
+          behavior: 'smooth',
         })
         return
       }
 
-      stepEl.scrollIntoView({ behavior: 'auto', block: 'start' })
+      stepEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
     }, 140)
-  }
-
-  const toggleCollapsed = (step: StepName) => {
-    setCollapsed((prev) => ({ ...prev, [step]: !prev[step] }))
-  }
+  }, [])
 
   // Validación progresiva de pasos
   const hasProfile = summary?.nutritionProfile !== null && summary?.nutritionProfile !== undefined
@@ -439,42 +434,67 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
   const canAccessPlan = hasProfile
   const canAccessProgress = hasPlan
 
-  useEffect(() => {
-    if (!accessToken) return
-
-    // Always start Nutri at Step 1 with the following steps collapsed.
-    setCollapsed({
-      profile: false,
-      plan: true,
-      portions: true,
-      progress: true,
-    })
-
-    setTimeout(() => {
-      const profileEl = document.getElementById('nutri-step-profile')
-      if (!profileEl) return
-
-      const scrollContainer = profileEl.closest('.overflow-y-auto')
-      if (scrollContainer instanceof HTMLElement) {
-        scrollContainer.scrollTo({ top: Math.max(profileEl.offsetTop - 8, 0), behavior: 'auto' })
-        return
-      }
-
-      profileEl.scrollIntoView({ behavior: 'auto', block: 'start' })
-    }, 80)
-  }, [accessToken])
-
   const currentStep = useMemo(() => {
     if (!hasProfile) return 1
     if (!hasPlan) return 2
     return 3
   }, [hasProfile, hasPlan])
 
+  const activeStepName = useMemo<StepName>(() => {
+    if (currentStep === 1) return 'profile'
+    if (currentStep === 2) return 'plan'
+    return 'progress'
+  }, [currentStep])
+
+  useEffect(() => {
+    if (!accessToken) return
+    openOnlyStep(activeStepName)
+  }, [accessToken, activeStepName, openOnlyStep])
+
   const stepLabel = useMemo(() => {
     if (!hasProfile) return '1. Completa tu perfil nutricional'
     if (!hasPlan) return '2. Define tu plan y porciones'
     return `3. Registrando datos: ${progressLogs.length} seguimientos`
   }, [hasProfile, hasPlan, progressLogs.length])
+
+  const isStepEnabled = useCallback((step: number): boolean => {
+    if (step === 1) return true
+    if (step === 2) return canAccessPlan
+    if (step === 3) return canAccessProgress
+    return false
+  }, [canAccessPlan, canAccessProgress])
+
+  const handleStepIndicatorClick = useCallback((step: number) => {
+    if (step === 1) {
+      openOnlyStep('profile')
+      return
+    }
+    if (step === 2 && canAccessPlan) {
+      openOnlyStep('plan')
+      return
+    }
+    if (step === 3 && canAccessProgress) {
+      openOnlyStep('progress')
+    }
+  }, [canAccessPlan, canAccessProgress, openOnlyStep])
+
+  const handleBlockedStepClick = useCallback((step: number) => {
+    if (step === 2) {
+      setBlockedStepHint('Completa y guarda el perfil para desbloquear el Paso 2.')
+      return
+    }
+    if (step === 3) {
+      setBlockedStepHint('Guarda tu plan para desbloquear el Paso 3.')
+      return
+    }
+    setBlockedStepHint('')
+  }, [])
+
+  useEffect(() => {
+    if (!blockedStepHint) return
+    const timer = setTimeout(() => setBlockedStepHint(''), 2200)
+    return () => clearTimeout(timer)
+  }, [blockedStepHint])
 
   const [profileForm, setProfileForm] = useState({
     objectiveGoal: 'healthy_diet',
@@ -916,7 +936,7 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
     const saved = await saveProgressLog(payload)
     if (saved) {
       setMessage('Seguimiento guardado correctamente.')
-      setCollapsed((prev) => ({ ...prev, progress: true }))
+      openOnlyStep('progress')
     }
   }
 
@@ -933,7 +953,19 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
   return (
     <div className="px-4 py-4 space-y-3">
       {/* Step Indicator */}
-      <StepIndicator currentStep={currentStep} totalSteps={3} stepLabel={stepLabel} />
+      <StepIndicator
+        currentStep={currentStep}
+        totalSteps={3}
+        stepLabel={stepLabel}
+        onStepClick={handleStepIndicatorClick}
+        isStepEnabled={isStepEnabled}
+        onBlockedStepClick={handleBlockedStepClick}
+      />
+      {blockedStepHint && (
+        <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 -mt-1">
+          {blockedStepHint}
+        </p>
+      )}
 
       {/* Mode Selector */}
       <div className="bg-white border border-gray-200 rounded-2xl p-3">
@@ -995,7 +1027,7 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
           title="1. Tu Perfil Nutricional"
           stepNumber={1}
           isExpanded={collapsed.profile}
-          onToggle={() => toggleCollapsed('profile')}
+          onToggle={() => openOnlyStep('profile')}
           isComplete={hasProfile}
         >
         <p className="text-[11px] text-gray-600 mb-2">Captura tu base clínica para calcular porciones y objetivos personalizados.</p>
@@ -1103,7 +1135,7 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
           title="2. Plan y Porciones"
           stepNumber={2}
           isExpanded={collapsed.plan}
-          onToggle={() => toggleCollapsed('plan')}
+          onToggle={() => openOnlyStep('plan')}
           isDisabled={!canAccessPlan}
           isComplete={hasPlan}
         >
@@ -1265,7 +1297,7 @@ export function NutritionPanel({ accessToken, onPlanSaved }: Props) {
           title="3. Seguimiento Semanal"
           stepNumber={3}
           isExpanded={collapsed.progress}
-          onToggle={() => toggleCollapsed('progress')}
+          onToggle={() => openOnlyStep('progress')}
           isDisabled={!canAccessProgress}
         >
         <p className="text-[11px] text-gray-600 mb-2">Registra solo métricas relevantes para ajustar tu plan.</p>

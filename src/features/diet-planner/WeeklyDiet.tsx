@@ -22,6 +22,8 @@ import {
   type DistributionKey,
 } from '@/services/nutrition/professionalNutritionRules'
 import {
+  alignMealPortionsToGroupTargets,
+  fillMissingGroupPortionsFromTargets,
   rankMealsForGroupTarget,
   type MealMatchResult,
   type MealRankingPreferences,
@@ -40,6 +42,7 @@ import {
   mealDistributionKeyFromTipo,
   passesGroupFilter,
   quantizeMultiplier,
+  stripIngredientKeysForSlot,
   titleCase,
 } from './weeklyDietHelpers'
 import type {
@@ -586,31 +589,85 @@ export function WeeklyDiet({
     }
   }
 
-  const setSavedMealOverride = useCallback((slotId: string, meal: Comida) => {
-    const override: Comida = {
-      ...meal,
-      realDishMetadata: {
-        ...meal.realDishMetadata,
-        source: 'curated' as const,
-      },
-    }
-    const previousOverride = savedMealOverrides[slotId]
-    const nextOverrides = {
-      ...savedMealOverrides,
-      [slotId]: override,
-    }
+  const setSavedMealOverride = useCallback(
+    (slotId: string, meal: Comida, opts?: { ingredientMultipliers?: PortionOverrides }) => {
+      const snapshotPortionOverrides = portionOverrides
+      const override: Comida = {
+        ...meal,
+        realDishMetadata: {
+          ...meal.realDishMetadata,
+          source: 'curated' as const,
+        },
+      }
+      const previousOverride = savedMealOverrides[slotId]
+      const nextOverrides = {
+        ...savedMealOverrides,
+        [slotId]: override,
+      }
 
-    setSavedMealOverrides(nextOverrides)
-    setSlotSaveState([slotId], 'saving')
-    if (onSetSlotMeal) {
-      void Promise.resolve(onSetSlotMeal(slotId, override)).then(async (saved) => {
+      if (opts?.ingredientMultipliers !== undefined) {
+        setPortionOverrides(opts.ingredientMultipliers)
+      }
+
+      setSavedMealOverrides(nextOverrides)
+      setSlotSaveState([slotId], 'saving')
+      if (onSetSlotMeal) {
+        void Promise.resolve(onSetSlotMeal(slotId, override)).then(async (saved) => {
+          if (saved) {
+            if (opts?.ingredientMultipliers !== undefined && onSyncWeekState) {
+              const synced = await onSyncWeekState({ ingredientMultipliers: opts.ingredientMultipliers })
+              if (!synced) {
+                setPortionOverrides(snapshotPortionOverrides)
+                setSavedMealOverrides((prev) => {
+                  const rollback = { ...prev }
+                  if (previousOverride) rollback[slotId] = previousOverride
+                  else delete rollback[slotId]
+                  return rollback
+                })
+                showSaveError('No se pudieron guardar las cantidades de la alternativa')
+                setSlotSaveState([slotId], 'error', 2400)
+                return
+              }
+            }
+            if (onRefreshPlan) {
+              await onRefreshPlan()
+            }
+            showSaveFeedback('Alternativa guardada en backend')
+            setSlotSaveState([slotId], 'saved', 1600)
+          } else {
+            if (opts?.ingredientMultipliers !== undefined) {
+              setPortionOverrides(snapshotPortionOverrides)
+            }
+            setSavedMealOverrides((prev) => {
+              const rollback = { ...prev }
+              if (previousOverride) rollback[slotId] = previousOverride
+              else delete rollback[slotId]
+              return rollback
+            })
+            showSaveError('No se pudo guardar la alternativa en backend')
+            setSlotSaveState([slotId], 'error', 2400)
+          }
+        })
+        triggerHaptic('light')
+        return
+      }
+
+      const weekStatePatch =
+        opts?.ingredientMultipliers !== undefined
+          ? { mealOverrides: nextOverrides, ingredientMultipliers: opts.ingredientMultipliers }
+          : { mealOverrides: nextOverrides }
+
+      void Promise.resolve(onSyncWeekState?.(weekStatePatch)).then(async (saved) => {
         if (saved) {
           if (onRefreshPlan) {
             await onRefreshPlan()
           }
           showSaveFeedback('Alternativa guardada en backend')
           setSlotSaveState([slotId], 'saved', 1600)
-        } else {
+        } else if (onSyncWeekState) {
+          if (opts?.ingredientMultipliers !== undefined) {
+            setPortionOverrides(snapshotPortionOverrides)
+          }
           setSavedMealOverrides((prev) => {
             const rollback = { ...prev }
             if (previousOverride) rollback[slotId] = previousOverride
@@ -622,29 +679,18 @@ export function WeeklyDiet({
         }
       })
       triggerHaptic('light')
-      return
-    }
-
-    void Promise.resolve(onSyncWeekState?.({ mealOverrides: nextOverrides })).then(async (saved) => {
-      if (saved) {
-        if (onRefreshPlan) {
-          await onRefreshPlan()
-        }
-        showSaveFeedback('Alternativa guardada en backend')
-        setSlotSaveState([slotId], 'saved', 1600)
-      } else if (onSyncWeekState) {
-        setSavedMealOverrides((prev) => {
-          const rollback = { ...prev }
-          if (previousOverride) rollback[slotId] = previousOverride
-          else delete rollback[slotId]
-          return rollback
-        })
-        showSaveError('No se pudo guardar la alternativa en backend')
-        setSlotSaveState([slotId], 'error', 2400)
-      }
-    })
-    triggerHaptic('light')
-  }, [onRefreshPlan, onSetSlotMeal, onSyncWeekState, savedMealOverrides, setSlotSaveState, showSaveError, showSaveFeedback])
+    },
+    [
+      onRefreshPlan,
+      onSetSlotMeal,
+      onSyncWeekState,
+      portionOverrides,
+      savedMealOverrides,
+      setSlotSaveState,
+      showSaveError,
+      showSaveFeedback,
+    ]
+  )
 
   const clearSavedMealOverride = useCallback((slotId: string) => {
     const previousOverride = savedMealOverrides[slotId]
@@ -1023,7 +1069,14 @@ export function WeeklyDiet({
                     onOpenSuggestedMeals={() => loadSlotAlternatives(cardId, comida.id)}
                     hasSuggestedMealOverride={Boolean(savedMealOverrides[cardId])}
                     saveState={slotSaveStates[cardId]}
-                    onApplySuggestedMeal={(meal) => setSavedMealOverride(cardId, meal)}
+                    onApplySuggestedMeal={(match) => {
+                      const aligned = fillMissingGroupPortionsFromTargets(
+                        alignMealPortionsToGroupTargets(match.meal, match.targetPortions),
+                        match.targetPortions
+                      )
+                      const nextIngredientMultipliers = stripIngredientKeysForSlot(portionOverrides, cardId)
+                      setSavedMealOverride(cardId, aligned, { ingredientMultipliers: nextIngredientMultipliers })
+                    }}
                     onClearSuggestedMeal={() => clearSavedMealOverride(cardId)}
                     swapEnabled={false}
                   />

@@ -41,7 +41,6 @@ export function MealCard({
   const [showGroupBreakdown, setShowGroupBreakdown] = useState(false)
   const [showSuggestedMeals, setShowSuggestedMeals] = useState(false)
   const [showAllSuggestedMeals, setShowAllSuggestedMeals] = useState(false)
-  const [showIngredientTools, setShowIngredientTools] = useState(false)
   const [ingredientPopup, setIngredientPopup] = useState<IngredientPopupState | null>(null)
   const [ingredientSearch, setIngredientSearch] = useState('')
 
@@ -236,83 +235,63 @@ export function MealCard({
               </div>
             )}
 
-            {suggestedMeals.length === 0 || hasSuggestedMealOverride || showIngredientTools ? (
-              <div className="p-2.5 sm:p-3 rounded-2xl bg-gray-50 mb-4 sm:mb-5">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-medium text-green-600">Ingredientes ({comida.ingredientes.length})</p>
-                  <span className="text-[10px] text-gray-500">Editables</span>
-                </div>
-                <ul className="space-y-1.5 sm:space-y-2">
-                  {comida.ingredientes.map((ing, idx) => {
-                    const multiplier = getIngredientMultiplier(slotId, ing.id, idx)
-                    const effectiveAmount = ing.cantidad * mealPortionFactor * multiplier
-                    const isModified = multiplier !== 1
+            <div className="p-2.5 sm:p-3 rounded-2xl bg-gray-50 mb-4 sm:mb-5">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-medium text-green-600">Ingredientes ({comida.ingredientes.length})</p>
+                <span className="text-[10px] text-gray-500">Editables</span>
+              </div>
+              <ul className="space-y-1.5 sm:space-y-2">
+                {comida.ingredientes.map((ing, idx) => {
+                  const multiplier = getIngredientMultiplier(slotId, ing.id, idx)
+                  const effectiveAmount = ing.cantidad * mealPortionFactor * multiplier
+                  const isModified = multiplier !== 1
 
-                    return (
-                      <li
-                        key={idx}
-                        className={`rounded-xl p-2 border ${
-                          multiplier === 0
-                            ? 'bg-gray-50 border-gray-200'
-                            : isModified
-                              ? 'bg-white border-l-4 border-amber-300 border-y-gray-200 border-r-gray-200'
-                              : 'bg-white border-gray-200'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <p
-                            className={`text-xs sm:text-sm font-medium flex-1 min-w-0 truncate ${
-                              multiplier === 0 ? 'line-through text-gray-400' : 'text-gray-900'
-                            }`}
-                          >
-                            {ing.cantidad > 0 ? `${formatQty(effectiveAmount)}${ing.unidad}` : '?'}{' '}
-                            {ing.id}
-                            {multiplier === 0 && (
-                              <span className="ml-1 text-[10px] font-normal not-italic">no usar</span>
-                            )}
-                          </p>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              const opts = getIngredientOptions(ing.id, `${ing.id} ${ing.presentacion || ''}`)
-                              setIngredientSearch('')
-                              setIngredientPopup({
-                                idx,
-                                ingId: ing.id,
-                                ingText: `${ing.id} ${ing.presentacion || ''}`,
-                                options: opts,
-                              })
-                            }}
-                            className="shrink-0 px-2.5 py-1 min-h-8 rounded-lg text-[10px] font-semibold bg-gray-100 text-gray-700 active:bg-gray-200"
-                          >
-                            ⚙ Editar
-                          </button>
-                        </div>
-                      </li>
-                    )
-                  })}
-                </ul>
-              </div>
-            ) : (
-              <div className="p-2.5 sm:p-3 rounded-2xl bg-amber-50 border border-amber-100 mb-4 sm:mb-5">
-                <p className="text-xs font-semibold text-amber-900">Primero sugerencia de comida</p>
-                <p className="text-[11px] text-amber-800 mt-1">
-                  Para evitar cambios al azar, primero elige una alternativa completa y luego ajusta ingredientes si hace
-                  falta.
-                </p>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    setShowIngredientTools(true)
-                  }}
-                  className="mt-2 px-3 py-2 min-h-9 rounded-lg text-[11px] font-semibold bg-white text-amber-800 border border-amber-200 active:bg-amber-100"
-                >
-                  Editar ingredientes (avanzado)
-                </button>
-              </div>
-            )}
+                  return (
+                    <li
+                      key={idx}
+                      className={`rounded-xl p-2 border ${
+                        multiplier === 0
+                          ? 'bg-gray-50 border-gray-200'
+                          : isModified
+                            ? 'bg-white border-l-4 border-amber-300 border-y-gray-200 border-r-gray-200'
+                            : 'bg-white border-gray-200'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p
+                          className={`text-xs sm:text-sm font-medium flex-1 min-w-0 truncate ${
+                            multiplier === 0 ? 'line-through text-gray-400' : 'text-gray-900'
+                          }`}
+                        >
+                          {ing.cantidad > 0 ? `${formatQty(effectiveAmount)}${ing.unidad}` : '?'}{' '}
+                          {ing.id}
+                          {multiplier === 0 && (
+                            <span className="ml-1 text-[10px] font-normal not-italic">no usar</span>
+                          )}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            const opts = getIngredientOptions(ing.id, `${ing.id} ${ing.presentacion || ''}`)
+                            setIngredientSearch('')
+                            setIngredientPopup({
+                              idx,
+                              ingId: ing.id,
+                              ingText: `${ing.id} ${ing.presentacion || ''}`,
+                              options: opts,
+                            })
+                          }}
+                          className="shrink-0 px-2.5 py-1 min-h-8 rounded-lg text-[10px] font-semibold bg-gray-100 text-gray-700 active:bg-gray-200"
+                        >
+                          ⚙ Editar
+                        </button>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
 
             <div>
               <p className="uppercase text-xs tracking-widest text-gray-500 font-medium mb-2">Preparación</p>

@@ -37,7 +37,7 @@ export interface MealCardProps {
   onOpenSuggestedMeals?: () => Promise<void>
   hasSuggestedMealOverride?: boolean
   saveState?: 'saving' | 'saved' | 'error'
-  onApplySuggestedMeal?: (meal: Comida) => void
+  onApplySuggestedMeal?: (match: MealMatchResult) => void
   onClearSuggestedMeal?: () => void
   swapEnabled?: boolean
 }

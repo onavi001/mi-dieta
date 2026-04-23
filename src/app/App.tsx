@@ -84,6 +84,7 @@ export default function App() {
   } = useDietApi()
   const { summary, loadSummary } = useNutritionApi(session?.accessToken)
   const { isBusy: isApiBusy, pendingRequests, currentLabel } = useApiActivity()
+  const hasNutritionSetup = Boolean(summary?.nutritionProfile || summary?.activePlanVersion)
 
   useEffect(() => {
     if (isApiBusy) {
@@ -122,6 +123,11 @@ export default function App() {
       }
     }
   }, [])
+
+  useEffect(() => {
+    if (!session?.accessToken) return
+    void loadSummary()
+  }, [loadSummary, session?.accessToken])
 
   useEffect(() => {
     try {
@@ -631,24 +637,26 @@ export default function App() {
                     </button>
                   </div>
 
-                  <div className="bg-white border border-gray-200 rounded-2xl p-5">
-                    <p className="text-sm font-semibold text-gray-900">Ya llenaste tu perfil?</p>
-                    <p className="text-xs text-gray-500 mt-1">Si ya tienes un plan guardado, genera tu dieta aquí.</p>
-                    {autoGeneratingMeals && (
-                      <p className="text-xs text-emerald-700 mt-2 bg-emerald-50 border border-emerald-200 rounded-lg px-2 py-1">
-                        Generando platillos automaticamente para tu semana...
-                      </p>
-                    )}
-                    {error && <p className="text-xs text-red-600 mt-2 bg-red-50 rounded-lg px-2 py-1">{error}</p>}
-                    <button
-                      type="button"
-                      onClick={() => void runGeneratePlanWorkflow()}
-                      disabled={loading || autoGeneratingMeals || actionLoading.generatePlan}
-                      className="mt-3 w-full bg-gray-900 text-white rounded-xl py-2.5 text-sm font-semibold disabled:opacity-60"
-                    >
-                      {loading || autoGeneratingMeals || actionLoading.generatePlan ? 'Generando...' : 'Generar mi dieta personalizada'}
-                    </button>
-                  </div>
+                  {hasNutritionSetup && (
+                    <div className="bg-white border border-gray-200 rounded-2xl p-5">
+                      <p className="text-sm font-semibold text-gray-900">Ya llenaste tu perfil?</p>
+                      <p className="text-xs text-gray-500 mt-1">Si ya tienes un plan guardado, genera tu dieta aquí.</p>
+                      {autoGeneratingMeals && (
+                        <p className="text-xs text-emerald-700 mt-2 bg-emerald-50 border border-emerald-200 rounded-lg px-2 py-1">
+                          Generando platillos automaticamente para tu semana...
+                        </p>
+                      )}
+                      {error && <p className="text-xs text-red-600 mt-2 bg-red-50 rounded-lg px-2 py-1">{error}</p>}
+                      <button
+                        type="button"
+                        onClick={() => void runGeneratePlanWorkflow()}
+                        disabled={loading || autoGeneratingMeals || actionLoading.generatePlan}
+                        className="mt-3 w-full bg-gray-900 text-white rounded-xl py-2.5 text-sm font-semibold disabled:opacity-60"
+                      >
+                        {loading || autoGeneratingMeals || actionLoading.generatePlan ? 'Generando...' : 'Generar mi dieta personalizada'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )
             : tab === 'dieta' && viewMode === 'combined' && actionLoading.loadCombinedPlan
