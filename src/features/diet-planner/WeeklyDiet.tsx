@@ -429,10 +429,46 @@ export function WeeklyDiet({
     }, 0)
   }
 
+  /**
+   * Referencia dinámica de gramos por porción para el grupo en el scope dado.
+   * Usa la composición real de ingredientes (ponderada por gramos efectivos) y
+   * cae al promedio fijo de grupo cuando no hay datos suficientes.
+   */
+  const scopeGroupPortionGramReference = (scopeMeals: WeeklyCardMeal[], group: PlanGroupKey): number => {
+    let totalGrams = 0
+    let totalPortions = 0
+
+    for (const meal of scopeMeals) {
+      const mealFactor = meal.id.startsWith('plan-') ? 1 : mealPortionFactor(meal.tipo)
+      for (const [idx, ingredient] of meal.ingredientes.entries()) {
+        const groupDetected = detectIngredientGroup(ingredient.id, `${ingredient.id} ${ingredient.presentacion || ''}`)
+        if (groupDetected !== group) continue
+
+        const ingredientMultiplier = getIngredientMultiplier(meal.slotId, ingredient.id, idx)
+        const grams = ingredientToEstimatedGrams(ingredient, group)
+        const effectiveGrams = grams * mealFactor * ingredientMultiplier
+        if (!Number.isFinite(effectiveGrams) || effectiveGrams <= 0) continue
+
+        const text = `${ingredient.id} ${ingredient.presentacion || ''}`
+        const gPerPortion = gramsPerPortionForIngredient(group, ingredient.id, text)
+        if (!Number.isFinite(gPerPortion) || gPerPortion <= 0) continue
+
+        totalGrams += effectiveGrams
+        totalPortions += effectiveGrams / gPerPortion
+      }
+    }
+
+    if (totalGrams > 0 && totalPortions > 0) {
+      return totalGrams / totalPortions
+    }
+
+    return GROUP_GRAMS_PER_PORTION[group]
+  }
+
   const dailyGroupImpact = (dayMeals: WeeklyCardMeal[]) => {
     return (Object.keys(planPortionsByGroup) as PlanGroupKey[]).map((group) => {
       const targetPortions = planPortionsByGroup[group]
-      const gramsPerPortion = GROUP_GRAMS_PER_PORTION[group]
+      const gramsPerPortion = scopeGroupPortionGramReference(dayMeals, group)
       const adjustedGrams = Math.round(
         dayMeals.reduce((acc, meal) => acc + mealGroupAdjustedGrams(meal, group), 0)
       )
@@ -520,7 +556,7 @@ export function WeeklyDiet({
           { goal }
         )
         const targetPortions = targetByMeal[mealKey] || 0
-        const gramsPerPortion = GROUP_GRAMS_PER_PORTION[group]
+        const gramsPerPortion = scopeGroupPortionGramReference([meal], group)
         const adjustedGrams = Math.round(mealGroupAdjustedGrams(meal, group))
         const adjustedPortions = Number(mealGroupAdjustedPortions(meal, group).toFixed(2))
 
