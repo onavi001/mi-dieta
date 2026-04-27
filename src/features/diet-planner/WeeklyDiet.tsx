@@ -94,7 +94,7 @@ export function WeeklyDiet({
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
   const [lastAction, setLastAction] = useState<LastAction | null>(null)
   const [savedMealOverrides, setSavedMealOverrides] = useState<SavedMealOverrides>(() => weekState?.mealOverrides || {})
-  const [mealSuggestionPreferences, setMealSuggestionPreferences] = useState<MealRankingPreferences>(() => weekState?.suggestionPreferences || DEFAULT_MEAL_SUGGESTION_PREFERENCES)
+  const [mealSuggestionPreferences] = useState<MealRankingPreferences>(() => weekState?.suggestionPreferences || DEFAULT_MEAL_SUGGESTION_PREFERENCES)
   const [slotSuggestedMeals, setSlotSuggestedMeals] = useState<Record<string, Comida[]>>({})
   const [mealsByTipoCatalog, setMealsByTipoCatalog] = useState<Partial<Record<TipoComida, Comida[]>>>({})
   const [loadingSlotSuggestions, setLoadingSlotSuggestions] = useState<Record<string, boolean>>({})
