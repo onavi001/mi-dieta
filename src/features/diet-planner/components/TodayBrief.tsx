@@ -23,11 +23,22 @@ export type TodayBriefImpactRow = {
   status: GroupStatus
 }
 
+export type TodayBriefImpactDetail = {
+  label: string
+  targetGrams: number
+  adjustedGrams: number
+  statusLabel: string
+  status: GroupStatus
+}
+
 type Props = {
   meals: TodayBriefMeal[]
   impactRows: TodayBriefImpactRow[]
+  impactDetails?: TodayBriefImpactDetail[]
   planPortionsTotal: number
   adjustedPortionsToday: number
+  targetGramsToday?: number
+  adjustedGramsToday?: number
   onScrollToMeal: (slotId: string) => void
   dailyEngagement?: DailyEngagement | null
   onSaveDailyEngagement?: (next: DailyEngagement) => Promise<boolean>
@@ -61,8 +72,11 @@ function rescueCopy(rows: TodayBriefImpactRow[], mealProgress: { done: number; t
 export function TodayBrief({
   meals,
   impactRows,
+  impactDetails = [],
   planPortionsTotal,
   adjustedPortionsToday,
+  targetGramsToday = 0,
+  adjustedGramsToday = 0,
   onScrollToMeal,
   dailyEngagement,
   onSaveDailyEngagement,
@@ -76,6 +90,8 @@ export function TodayBrief({
   const [streak, setStreak] = useState(() => readConsistencyStreak().count)
   const [rescueApplying, setRescueApplying] = useState(false)
   const [rescueFeedback, setRescueFeedback] = useState('')
+  const [expanded, setExpanded] = useState(false)
+  const [impactExpanded, setImpactExpanded] = useState(false)
 
   useEffect(() => {
     if (viewedEventSentRef.current === dateKey) return
@@ -173,126 +189,189 @@ export function TodayBrief({
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <div className="rounded-xl bg-white/90 border border-emerald-100 px-2.5 py-2">
-          <p className="text-[10px] text-gray-500">Porciones hoy</p>
-          <p className="text-xs font-bold text-gray-900">
-            {adjustedPortionsToday.toFixed(1)}
-            <span className="text-[10px] font-medium text-gray-500"> / {planPortionsTotal.toFixed(1)} obj.</span>
-          </p>
-          {portionDelta !== null && (
-            <p className={`text-[10px] mt-0.5 ${portionDelta > 0.5 ? 'text-amber-700' : portionDelta < -0.5 ? 'text-sky-700' : 'text-emerald-700'}`}>
-              {portionDelta > 0.5 ? 'Sobre el plan' : portionDelta < -0.5 ? 'Bajo el plan' : 'En rango'}
-            </p>
-          )}
-        </div>
-        <div className="rounded-xl bg-white/90 border border-emerald-100 px-2.5 py-2">
-          <p className="text-[10px] text-gray-500">Comidas</p>
-          <p className="text-xs font-bold text-gray-900">
-            {meals.filter((m) => m.completed).length}/{meals.length}
-            <span className="text-[10px] font-medium text-gray-500"> hechas</span>
-          </p>
+      <div className="rounded-xl border border-emerald-100 bg-white/90 px-3 py-2.5 mb-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-gray-900">Tu siguiente comida</p>
+            {nextMeal && (
+              <p className="text-[10px] text-gray-600 truncate mt-0.5">
+                Siguiente: {nextMeal.hour} · {nextMeal.nombre}
+              </p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setExpanded((prev) => !prev)}
+            className="shrink-0 min-h-8 px-2.5 rounded-lg text-[10px] font-semibold bg-emerald-100 text-emerald-800 active:bg-emerald-200"
+          >
+            {expanded ? 'Ver menos' : 'Ver mas'}
+          </button>
         </div>
       </div>
 
-      {nextMeal && (
-        <div className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 mb-3">
-          <p className="text-[10px] font-semibold text-gray-500 uppercase">Siguiente foco</p>
-          <p className="text-sm font-semibold text-gray-900 leading-snug">{nextMeal.nombre}</p>
-          <p className="text-[11px] text-gray-600 mt-0.5">
-            {nextMeal.hour} · {nextMeal.tipo}
-            {nextMeal.completed ? ' · Listo' : ' · Pendiente'}
-          </p>
-          <button
-            type="button"
-            onClick={() => {
-              void onTrackEvent?.('today_brief_go_to_meal_click', {
-                slotId: nextMeal.slotId,
-                mealName: nextMeal.nombre,
-              })
-              onScrollToMeal(nextMeal.slotId)
-            }}
-            className="mt-2 w-full min-h-9 rounded-xl bg-emerald-600 text-white text-[11px] font-semibold active:bg-emerald-700"
-          >
-            Ir a esta comida
-          </button>
-        </div>
-      )}
+      <div
+        className={`overflow-hidden transition-all duration-300 ease-out ${
+          expanded ? 'max-h-[1200px] opacity-100' : 'max-h-0 opacity-0'
+        }`}
+        aria-hidden={!expanded}
+      >
+          {nextMeal && (
+            <div className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 mb-3">
+              <p className="text-[10px] font-semibold text-gray-500 uppercase">Siguiente foco</p>
+              <p className="text-sm font-semibold text-gray-900 leading-snug">{nextMeal.nombre}</p>
+              <p className="text-[11px] text-gray-600 mt-0.5">
+                {nextMeal.hour} · {nextMeal.tipo}
+                {nextMeal.completed ? ' · Listo' : ' · Pendiente'}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  void onTrackEvent?.('today_brief_go_to_meal_click', {
+                    slotId: nextMeal.slotId,
+                    mealName: nextMeal.nombre,
+                  })
+                  onScrollToMeal(nextMeal.slotId)
+                }}
+                className="mt-2 w-full min-h-9 rounded-xl bg-emerald-600 text-white text-[11px] font-semibold active:bg-emerald-700"
+              >
+                Ir a esta comida
+              </button>
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <div className="rounded-xl bg-white/90 border border-emerald-100 px-2.5 py-2">
+              <p className="text-[10px] text-gray-500">Porciones hoy</p>
+              <p className="text-xs font-bold text-gray-900">
+                {adjustedPortionsToday.toFixed(1)}
+                <span className="text-[10px] font-medium text-gray-500"> / {planPortionsTotal.toFixed(1)} obj.</span>
+              </p>
+              {portionDelta !== null && (
+                <p className={`text-[10px] mt-0.5 ${portionDelta > 0.5 ? 'text-amber-700' : portionDelta < -0.5 ? 'text-sky-700' : 'text-emerald-700'}`}>
+                  {portionDelta > 0.5 ? 'Sobre el plan' : portionDelta < -0.5 ? 'Bajo el plan' : 'En rango'}
+                </p>
+              )}
+            </div>
+          </div>
 
-      {rescue && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 mb-3">
-          <p className="text-[11px] text-amber-900 leading-snug">{rescue}</p>
-          {onApplyRescue && (
-            <button
-              type="button"
-              disabled={rescueApplying}
-              onClick={async () => {
-                setRescueApplying(true)
-                void onTrackEvent?.('today_brief_rescue_apply_click', {
-                  rescueKind: 'auto_adjust_day',
-                })
-                const ok = await Promise.resolve(onApplyRescue())
-                setRescueFeedback(ok ? 'Rescate aplicado. Revisa impacto diario.' : 'No se pudo aplicar rescate.')
-                void onTrackEvent?.('today_brief_rescue_apply_result', {
-                  rescueKind: 'auto_adjust_day',
-                  ok: Boolean(ok),
-                })
-                setRescueApplying(false)
-              }}
-              className="mt-2 w-full min-h-9 rounded-xl bg-amber-600 text-white text-[11px] font-semibold active:bg-amber-700 disabled:opacity-60"
+          <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2.5 mb-3">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-[10px] font-semibold text-emerald-900 uppercase">Impacto diario</p>
+                <p className="text-[11px] text-emerald-800">
+                  Porciones: {planPortionsTotal.toFixed(1)} vs {adjustedPortionsToday.toFixed(1)}
+                </p>
+                <p className="text-[11px] text-emerald-800">
+                  Gramos: {Math.round(targetGramsToday)}g vs {Math.round(adjustedGramsToday)}g
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setImpactExpanded((prev) => !prev)}
+                className="shrink-0 min-h-8 px-2.5 rounded-lg text-[10px] font-semibold bg-emerald-100 text-emerald-800 active:bg-emerald-200"
+              >
+                {impactExpanded ? 'Ver menos' : 'Ver detalle'}
+              </button>
+            </div>
+
+            <div
+              className={`overflow-hidden transition-all duration-300 ease-out ${
+                impactExpanded ? 'max-h-[600px] opacity-100 mt-2' : 'max-h-0 opacity-0'
+              }`}
+              aria-hidden={!impactExpanded}
             >
-              {rescueApplying ? 'Aplicando rescate...' : 'Aplicar rescate al resto del dia'}
-            </button>
-          )}
-          {rescueFeedback && (
-            <p className={`text-[10px] mt-2 ${rescueFeedback.startsWith('No se') ? 'text-rose-700' : 'text-emerald-700'}`}>
-              {rescueFeedback}
-            </p>
-          )}
-        </div>
-      )}
+              {impactDetails.length > 0 && (
+                <div className="grid grid-cols-1 gap-1.5">
+                  {impactDetails.map((item) => (
+                    <div key={item.label} className="text-[10px] rounded-lg px-2 py-1.5 border bg-white/90 border-emerald-200">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-semibold truncate">{item.label}</p>
+                        <span className="text-[9px] font-semibold text-emerald-800 bg-emerald-100 rounded-full px-1.5 py-0.5">
+                          {item.statusLabel}
+                        </span>
+                      </div>
+                      <p>Obj: {item.targetGrams}g · Act: {item.adjustedGrams}g</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
 
-      <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
-        <p className="text-[10px] font-semibold text-gray-600 uppercase mb-2">Check-in de hoy</p>
-        <div className="grid grid-cols-3 gap-1.5">
-          <button
-            type="button"
-            onClick={() => handleCheckin('good')}
-            className={`min-h-10 rounded-lg text-[10px] font-semibold border ${
-              effectiveCheckin === 'good' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-800 border-gray-300 active:bg-gray-100'
-            }`}
-          >
-            Voy bien
-          </button>
-          <button
-            type="button"
-            onClick={() => handleCheckin('slip')}
-            className={`min-h-10 rounded-lg text-[10px] font-semibold border ${
-              effectiveCheckin === 'slip' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-800 border-gray-300 active:bg-gray-100'
-            }`}
-          >
-            Me salí
-          </button>
-          <button
-            type="button"
-            onClick={() => handleCheckin('help')}
-            className={`min-h-10 rounded-lg text-[10px] font-semibold border ${
-              effectiveCheckin === 'help' ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-gray-800 border-gray-300 active:bg-gray-100'
-            }`}
-          >
-            Ayuda
-          </button>
-        </div>
-        {effectiveCheckin === 'help' && (
-          <p className="text-[10px] text-gray-600 mt-2 leading-snug">
-            Abajo tienes tu plan del día. Si un grupo va alto, usa “Ajustar comidas y medidas al objetivo” en impacto diario.
-          </p>
-        )}
-        {effectiveCheckin === 'slip' && (
-          <p className="text-[10px] text-gray-600 mt-2 leading-snug">
-            Sin culpa: sigue con la siguiente comida del plan. Un día no define tu semana.
-          </p>
-        )}
+          {rescue && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 mb-3">
+              <p className="text-[11px] text-amber-900 leading-snug">{rescue}</p>
+              {onApplyRescue && (
+                <button
+                  type="button"
+                  disabled={rescueApplying}
+                  onClick={async () => {
+                    setRescueApplying(true)
+                    void onTrackEvent?.('today_brief_rescue_apply_click', {
+                      rescueKind: 'auto_adjust_day',
+                    })
+                    const ok = await Promise.resolve(onApplyRescue())
+                    setRescueFeedback(ok ? 'Rescate aplicado. Revisa impacto diario.' : 'No se pudo aplicar rescate.')
+                    void onTrackEvent?.('today_brief_rescue_apply_result', {
+                      rescueKind: 'auto_adjust_day',
+                      ok: Boolean(ok),
+                    })
+                    setRescueApplying(false)
+                  }}
+                  className="mt-2 w-full min-h-9 rounded-xl bg-amber-600 text-white text-[11px] font-semibold active:bg-amber-700 disabled:opacity-60"
+                >
+                  {rescueApplying ? 'Aplicando rescate...' : 'Aplicar rescate al resto del dia'}
+                </button>
+              )}
+              {rescueFeedback && (
+                <p className={`text-[10px] mt-2 ${rescueFeedback.startsWith('No se') ? 'text-rose-700' : 'text-emerald-700'}`}>
+                  {rescueFeedback}
+                </p>
+              )}
+            </div>
+          )}
+
+          <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5">
+            <p className="text-[10px] font-semibold text-gray-600 uppercase mb-2">Check-in de hoy</p>
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleCheckin('good')}
+                className={`min-h-10 rounded-lg text-[10px] font-semibold border ${
+                  effectiveCheckin === 'good' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-800 border-gray-300 active:bg-gray-100'
+                }`}
+              >
+                Voy bien
+              </button>
+              <button
+                type="button"
+                onClick={() => handleCheckin('slip')}
+                className={`min-h-10 rounded-lg text-[10px] font-semibold border ${
+                  effectiveCheckin === 'slip' ? 'bg-amber-600 text-white border-amber-600' : 'bg-white text-gray-800 border-gray-300 active:bg-gray-100'
+                }`}
+              >
+                Me salí
+              </button>
+              <button
+                type="button"
+                onClick={() => handleCheckin('help')}
+                className={`min-h-10 rounded-lg text-[10px] font-semibold border ${
+                  effectiveCheckin === 'help' ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-gray-800 border-gray-300 active:bg-gray-100'
+                }`}
+              >
+                Ayuda
+              </button>
+            </div>
+            {effectiveCheckin === 'help' && (
+              <p className="text-[10px] text-gray-600 mt-2 leading-snug">
+                Abajo tienes tu plan del dia. Si un grupo va alto, enfocate en la siguiente comida del plan.
+              </p>
+            )}
+            {effectiveCheckin === 'slip' && (
+              <p className="text-[10px] text-gray-600 mt-2 leading-snug">
+                Sin culpa: sigue con la siguiente comida del plan. Un día no define tu semana.
+              </p>
+            )}
+          </div>
       </div>
     </div>
   )

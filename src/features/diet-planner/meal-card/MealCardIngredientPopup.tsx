@@ -1,5 +1,9 @@
 import { GROUP_LABELS } from '@/data/reference/ingredientReference'
-import { detectIngredientGroup } from '@/data/reference/ingredientConversionUtils'
+import {
+  detectIngredientGroup,
+  gramsPerPortionForIngredient,
+  ingredientToEstimatedGrams,
+} from '@/data/reference/ingredientConversionUtils'
 import type { Comida } from '@/types/domain'
 import { buildConversionModalState } from './mealCardConversion'
 import type { ConversionModalState } from './mealCardTypes'
@@ -50,6 +54,12 @@ export function MealCardIngredientPopup({
   const replacing = isIngredientReplacing(slotId, idx)
   const multiplier = getIngredientMultiplier(slotId, ingId, idx)
   const effectiveAmount = ing.cantidad * mealPortionFactor * multiplier
+  const currentEquivalentPortion = detectedGroup
+    ? gramsPerPortionForIngredient(detectedGroup, ing.id, `${ing.id} ${ing.presentacion || ''}`)
+    : null
+  const currentEffectiveGrams = detectedGroup
+    ? ingredientToEstimatedGrams(ing, detectedGroup) * mealPortionFactor * multiplier
+    : null
   const filtered =
     ingredientSearch.trim() === ''
       ? options
@@ -160,6 +170,29 @@ export function MealCardIngredientPopup({
             <ul className="space-y-1 max-h-48 overflow-y-auto">
               {filtered.map((optionId) => (
                 <li key={optionId}>
+                  {(() => {
+                    const optionGroup = detectIngredientGroup(optionId, optionId)
+                    let nextQtyHint: string | null = null
+
+                    if (
+                      detectedGroup &&
+                      optionGroup === detectedGroup &&
+                      currentEquivalentPortion &&
+                      currentEffectiveGrams &&
+                      currentEquivalentPortion > 0 &&
+                      currentEffectiveGrams > 0
+                    ) {
+                      const nextEquivalentPortion = gramsPerPortionForIngredient(detectedGroup, optionId, optionId)
+                      if (nextEquivalentPortion > 0) {
+                        const currentPortions = currentEffectiveGrams / currentEquivalentPortion
+                        const nextGrams = currentPortions * nextEquivalentPortion
+                        if (Number.isFinite(nextGrams) && nextGrams > 0) {
+                          nextQtyHint = `≈ ${Math.round(nextGrams)}g`
+                        }
+                      }
+                    }
+
+                    return (
                   <button
                     type="button"
                     disabled={replacing}
@@ -173,9 +206,20 @@ export function MealCardIngredientPopup({
                         : 'bg-gray-50 text-gray-800 font-medium active:bg-gray-100'
                     }`}
                   >
-                    {optionId === ingId ? '✓ ' : ''}
-                    {optionId}
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="truncate">
+                        {optionId === ingId ? '✓ ' : ''}
+                        {optionId}
+                      </span>
+                      {nextQtyHint && (
+                        <span className="shrink-0 text-[10px] font-semibold text-gray-500">
+                          {nextQtyHint}
+                        </span>
+                      )}
+                    </span>
                   </button>
+                    )
+                  })()}
                 </li>
               ))}
               {filtered.length === 0 && (

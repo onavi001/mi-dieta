@@ -38,7 +38,6 @@ import {
   mealPreferenceScore,
   sortIngredientOptionsForProfile,
 } from '@/services/profile-food/profileFoodRules'
-import { portionStatusSurfaceClasses } from '@/features/diet-planner/meal-card/mealCardStyles'
 import {
   DEFAULT_DISTRIBUTION,
   DEFAULT_MEAL_SUGGESTION_PREFERENCES,
@@ -51,7 +50,6 @@ import {
   titleCase,
 } from './weeklyDietHelpers'
 import type {
-  DayAdjustmentSnapshot,
   GroupFilter,
   LastAction,
   MealGroupBreakdown,
@@ -94,7 +92,6 @@ export function WeeklyDiet({
 }: WeeklyDietProps) {
   const { summary, loadSummary } = useNutritionApi(accessToken)
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
-  const [expandedImpactDays, setExpandedImpactDays] = useState<Set<string>>(new Set())
   const [lastAction, setLastAction] = useState<LastAction | null>(null)
   const [savedMealOverrides, setSavedMealOverrides] = useState<SavedMealOverrides>(() => weekState?.mealOverrides || {})
   const [mealSuggestionPreferences, setMealSuggestionPreferences] = useState<MealRankingPreferences>(() => weekState?.suggestionPreferences || DEFAULT_MEAL_SUGGESTION_PREFERENCES)
@@ -107,7 +104,6 @@ export function WeeklyDiet({
   const [slotSaveStates, setSlotSaveStates] = useState<Record<string, SlotSaveState>>({})
   const [groupFilter] = useState<GroupFilter>('all')
   const [autoAdjustMessage, setAutoAdjustMessage] = useState('')
-  const [lastAutoAdjustSnapshotByDay, setLastAutoAdjustSnapshotByDay] = useState<Record<string, DayAdjustmentSnapshot>>({})
   const [saveFeedback, setSaveFeedback] = useState('')
   const [saveError, setSaveError] = useState('')
   const multiplierDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -176,29 +172,6 @@ export function WeeklyDiet({
       }
     })
   }, [])
-
-  const persistSuggestionPreferences = useCallback((nextPreferences: MealRankingPreferences) => {
-    if (!onSyncWeekState) return
-
-    const normalizedPreferences = {
-      preferredCuisineTags: nextPreferences.preferredCuisineTags || [],
-      preferQuickMeals: Boolean(nextPreferences.preferQuickMeals),
-      avoidFish: Boolean(nextPreferences.avoidFish),
-      preferMeasuredMeals:
-        typeof nextPreferences.preferMeasuredMeals === 'boolean'
-          ? nextPreferences.preferMeasuredMeals
-          : true,
-      autoApplyToGeneratedWeek:
-        typeof nextPreferences.autoApplyToGeneratedWeek === 'boolean'
-          ? nextPreferences.autoApplyToGeneratedWeek
-          : true,
-    }
-
-    void Promise.resolve(onSyncWeekState({ suggestionPreferences: normalizedPreferences })).then((saved) => {
-      if (saved) showSaveFeedback('Preferencias guardadas')
-      else showSaveError('No se pudieron guardar las preferencias')
-    })
-  }, [onSyncWeekState, showSaveError, showSaveFeedback])
 
   useEffect(() => {
     if (!accessToken) return
@@ -488,13 +461,21 @@ export function WeeklyDiet({
     })
   }
 
-  const todayImpactRows = useMemo(() => {
-    return dailyGroupImpact(todayMeals).map((row) => ({ label: row.label, status: row.status }))
+  const todayGroupImpact = useMemo(() => {
+    return dailyGroupImpact(todayMeals)
   }, [todayMeals, planPortionsByGroup, portionOverrides, distributionByMeal])
 
+  const todayImpactRows = useMemo(() => {
+    return todayGroupImpact.map((row) => ({ label: row.label, status: row.status }))
+  }, [todayGroupImpact])
+
   const adjustedPortionsToday = useMemo(() => {
-    return Number(dailyGroupImpact(todayMeals).reduce((acc, item) => acc + item.adjustedPortions, 0).toFixed(2))
-  }, [todayMeals, planPortionsByGroup, portionOverrides, distributionByMeal])
+    return Number(todayGroupImpact.reduce((acc, item) => acc + item.adjustedPortions, 0).toFixed(2))
+  }, [todayGroupImpact])
+
+  const adjustedGramsToday = useMemo(() => {
+    return todayGroupImpact.reduce((acc, item) => acc + item.adjustedGrams, 0)
+  }, [todayGroupImpact])
 
   const scrollToMealCard = useCallback((slotId: string) => {
     setExpandedCards((prev) => {
@@ -627,18 +608,6 @@ export function WeeklyDiet({
       next.add(id)
     }
     setExpandedCards(next)
-  }
-
-  const toggleDayImpact = (day: string) => {
-    setExpandedImpactDays((prev) => {
-      const next = new Set(prev)
-      if (next.has(day)) {
-        next.delete(day)
-      } else {
-        next.add(day)
-      }
-      return next
-    })
   }
 
   const toggleMealCompleted = async (slotId: string, previousState: boolean) => {
@@ -867,24 +836,6 @@ export function WeeklyDiet({
     }
   }
 
-  const toggleCuisinePreference = (tag: string) => {
-    setMealSuggestionPreferences((prev) => {
-      const current = prev.preferredCuisineTags || []
-      const next = current.includes(tag)
-        ? current.filter((item) => item !== tag)
-        : [...current, tag]
-
-      const nextPreferences = {
-        ...prev,
-        preferredCuisineTags: next,
-      }
-
-      persistSuggestionPreferences(nextPreferences)
-
-      return nextPreferences
-    })
-  }
-
   const autoAdjustDayToPlan = async (day: string): Promise<boolean> => {
     const dayMeals = meals.filter((meal) => meal.day === day)
     if (dayMeals.length === 0) return false
@@ -923,17 +874,10 @@ export function WeeklyDiet({
       groupRatios[item.group] = Math.max(0, Math.min(2, Number(rawRatio.toFixed(3))))
     }
 
-    let snapshot: DayAdjustmentSnapshot = {}
-
     let nextOverridesSnapshot: PortionOverrides = {}
 
     setPortionOverrides((prev) => {
       const next = { ...prev }
-
-       snapshot = {}
-      for (const key of affectedKeys) {
-        snapshot[key] = prev[key] ?? null
-      }
 
       for (const meal of dayMeals) {
         for (const [idx, ingredient] of meal.ingredientes.entries()) {
@@ -970,55 +914,9 @@ export function WeeklyDiet({
       return false
     }
 
-    setLastAutoAdjustSnapshotByDay((prev) => ({
-      ...prev,
-      [day]: snapshot,
-    }))
-
     setAutoAdjustMessage(`Ajuste aplicado para ${day}. Revisa el detalle por grupo y repite si hace falta afinar.`)
     triggerHaptic('success')
     return true
-  }
-
-  const revertAutoAdjustDay = (day: string) => {
-    const snapshot = lastAutoAdjustSnapshotByDay[day]
-    if (!snapshot) return
-
-    let nextOverridesSnapshot: PortionOverrides = {}
-
-    setPortionOverrides((prev) => {
-      const next = { ...prev }
-      for (const [key, value] of Object.entries(snapshot)) {
-        if (value === null) {
-          delete next[key]
-        } else {
-          next[key] = value
-        }
-      }
-      nextOverridesSnapshot = next
-      return next
-    })
-
-    const daySlotIds = meals.filter((meal) => meal.day === day).map((meal) => meal.slotId)
-    setSlotSaveState(daySlotIds, 'saving')
-    void Promise.resolve(onSyncWeekState?.({ ingredientMultipliers: nextOverridesSnapshot })).then((saved) => {
-      if (saved) {
-        showSaveFeedback('Ajustes revertidos')
-        setSlotSaveState(daySlotIds, 'saved', 1600)
-      } else if (onSyncWeekState) {
-        showSaveError('No se pudieron revertir los ajustes')
-        setSlotSaveState(daySlotIds, 'error', 2400)
-      }
-    })
-
-    setLastAutoAdjustSnapshotByDay((prev) => {
-      const next = { ...prev }
-      delete next[day]
-      return next
-    })
-
-    setAutoAdjustMessage(`Ajuste revertido para ${day}.`)
-    triggerHaptic('light')
   }
 
   if (mode === 'combined') {
@@ -1040,22 +938,6 @@ export function WeeklyDiet({
       <WeeklyDietProgressPanel
         completedToday={completedToday}
         todayMealCount={todayMeals.length}
-        mealSuggestionPreferences={mealSuggestionPreferences}
-        onToggleCuisineTag={toggleCuisinePreference}
-        onTogglePreferQuickMeals={() => {
-          setMealSuggestionPreferences((prev) => {
-            const nextPreferences = { ...prev, preferQuickMeals: !prev.preferQuickMeals }
-            persistSuggestionPreferences(nextPreferences)
-            return nextPreferences
-          })
-        }}
-        onToggleAvoidFish={() => {
-          setMealSuggestionPreferences((prev) => {
-            const nextPreferences = { ...prev, avoidFish: !prev.avoidFish }
-            persistSuggestionPreferences(nextPreferences)
-            return nextPreferences
-          })
-        }}
         autoAdjustMessage={autoAdjustMessage}
       />
 
@@ -1069,8 +951,17 @@ export function WeeklyDiet({
             completed: meal.completed,
           }))}
           impactRows={todayImpactRows}
+          impactDetails={todayGroupImpact.map((item) => ({
+            label: item.label,
+            targetGrams: item.targetGrams,
+            adjustedGrams: item.adjustedGrams,
+            statusLabel: item.statusLabel,
+            status: item.status,
+          }))}
           planPortionsTotal={planDailyTotals.portions}
           adjustedPortionsToday={adjustedPortionsToday}
+          targetGramsToday={planDailyTotals.grams}
+          adjustedGramsToday={adjustedGramsToday}
           onScrollToMeal={scrollToMealCard}
           dailyEngagement={dailyEngagement}
           onSaveDailyEngagement={onSaveDailyEngagement}
@@ -1084,11 +975,6 @@ export function WeeklyDiet({
       {displayedDays.map((day) => {
         const dayMeals = meals.filter((meal) => meal.day === day)
         const isDayCompleted = dayMeals.length > 0 && dayMeals.every((meal) => meal.completed)
-        const dayGroupImpact = dailyGroupImpact(dayMeals)
-        const filteredDayGroupImpact = dayGroupImpact.filter((item) => passesGroupFilter(item.status, groupFilter))
-        const adjustedPortions = Number(dayGroupImpact.reduce((acc, item) => acc + item.adjustedPortions, 0).toFixed(2))
-        const adjustedGrams = dayGroupImpact.reduce((acc, item) => acc + item.adjustedGrams, 0)
-        const dayImpactExpanded = expandedImpactDays.has(day)
 
         return (
           <div key={day} className="mb-10">
@@ -1104,57 +990,6 @@ export function WeeklyDiet({
               >
                 {isDayCompleted ? '✓ Completo' : 'Completar hoy'}
               </button>
-            </div>
-
-            <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-3 mb-3">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-xs text-emerald-900 font-semibold">Impacto diario</p>
-                  <p className="text-[11px] text-emerald-800">Porciones (objetivo vs actual): {planDailyTotals.portions} vs {adjustedPortions}</p>
-                  <p className="text-[11px] text-emerald-800">Gramos (objetivo vs actual): {planDailyTotals.grams}g vs {adjustedGrams}g</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => toggleDayImpact(day)}
-                  className="px-2.5 py-1.5 min-h-9 rounded-lg text-[11px] font-semibold bg-emerald-100 text-emerald-800 active:bg-emerald-200"
-                >
-                  {dayImpactExpanded ? 'Ocultar detalle' : 'Ver detalle'}
-                </button>
-              </div>
-
-              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => autoAdjustDayToPlan(day)}
-                  className="w-full px-3 py-2 min-h-9 rounded-lg text-[11px] font-semibold bg-emerald-600 text-white active:bg-emerald-700"
-                >
-                  Ajustar comidas y medidas al objetivo
-                </button>
-                <button
-                  type="button"
-                  onClick={() => revertAutoAdjustDay(day)}
-                  disabled={!lastAutoAdjustSnapshotByDay[day]}
-                  className="w-full px-3 py-2 min-h-9 rounded-lg text-[11px] font-semibold bg-white text-gray-700 border border-gray-300 active:bg-gray-100 disabled:opacity-50"
-                >
-                  Revertir ajuste del día
-                </button>
-              </div>
-
-              {dayImpactExpanded && (
-                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {filteredDayGroupImpact.map((item) => (
-                    <div key={item.group} className={`text-[10px] rounded-lg px-2 py-1.5 border ${portionStatusSurfaceClasses(item.status)}`}>
-                      <p className="font-semibold">{item.label}</p>
-                      <p>Objetivo: {item.targetGrams}g</p>
-                      <p>Actual: {item.adjustedGrams}g</p>
-                      <p className="font-semibold">{item.statusLabel}</p>
-                    </div>
-                  ))}
-                  {filteredDayGroupImpact.length === 0 && (
-                    <p className="text-[11px] text-gray-600 col-span-full">No hay grupos para el filtro seleccionado en este día.</p>
-                  )}
-                </div>
-              )}
             </div>
 
             <div className="space-y-3">
