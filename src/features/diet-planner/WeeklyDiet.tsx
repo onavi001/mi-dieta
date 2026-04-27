@@ -461,9 +461,7 @@ export function WeeklyDiet({
     })
   }
 
-  const todayGroupImpact = useMemo(() => {
-    return dailyGroupImpact(todayMeals)
-  }, [todayMeals, planPortionsByGroup, portionOverrides, distributionByMeal])
+  const todayGroupImpact = dailyGroupImpact(todayMeals)
 
   const todayImpactRows = useMemo(() => {
     return todayGroupImpact.map((row) => ({ label: row.label, status: row.status }))
