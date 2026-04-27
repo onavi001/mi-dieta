@@ -112,6 +112,33 @@ Hay un proyecto nativo en `android/` generado con [Capacitor](https://capacitorj
 3. Abre el IDE: `npm run cap:open:android`.
 4. En Android Studio: **Build → Generate Signed App Bundle**, firma el **AAB** y súbelo a Play Console.
 
+#### Guía rápida: Prueba cerrada en Play Console (Android Studio)
+
+Si Play Console marca `Todos los bundles subidos deben estar firmados`, usa este flujo:
+
+1. En la raíz del repo ejecuta:
+   - `npm run cap:sync`
+2. Abre Android Studio:
+   - `npm run cap:open:android`
+3. Android Studio:
+   - **Build → Generate Signed Bundle / APK**
+   - Selecciona **Android App Bundle**
+   - Si no tienes keystore: **Create new...** y guarda el `.jks` en una ruta segura.
+   - Elige variante **release** y genera.
+4. Sube el `.aab` generado en Play Console:
+   - **Pruebas → Prueba cerrada → Crear versión nueva**
+   - Adjunta el bundle firmado y publica la versión de la pista.
+
+Notas:
+- El `applicationId` (`com.onavi001.midieta`) debe coincidir con la app de Play Console.
+- Incrementa `versionCode` en `android/app/build.gradle` en cada release.
+- Si compilas por terminal y falla con `invalid source release: 21`, usa el JDK de Android Studio:
+
+```bash
+export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+export PATH="$JAVA_HOME/bin:$PATH"
+```
+
 Los archivos copiados bajo `android/app/src/main/assets/public` están en `.gitignore`; en un clone nuevo hace falta `npm run cap:sync` antes de compilar. El `vite.config` usa `base: './'` para que los assets carguen bien en el WebView.
 
 Para una build “de tienda”, define las mismas variables `VITE_*` que en Netlify (API, Sentry, etc.) en el entorno desde el que ejecutas `npm run build`, o usa `.env.production` / `.env.production.local`.
