@@ -33,10 +33,6 @@ export default function App() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [authMessage, setAuthMessage] = useState('')
-  const [shareUserIdInput, setShareUserIdInput] = useState('')
-  const [shareSearchInput, setShareSearchInput] = useState('')
-  const [shareCanEditInput, setShareCanEditInput] = useState(false)
-  const [shareMessage, setShareMessage] = useState('')
   const [resetMessage, setResetMessage] = useState('')
   const [legalView, setLegalView] = useState<LegalView | null>(null)
   const [autoGeneratingMeals, setAutoGeneratingMeals] = useState(false)
@@ -53,19 +49,8 @@ export default function App() {
     plan,
     activeSlots,
     combinedSlots,
-    shareUsers,
-    shareCandidates,
-    incomingInvites,
-    selectedShareUserId,
-    setSelectedShareUserId,
     viewMode,
     setViewMode,
-    sendShareInvite,
-    searchShareCandidates,
-    acceptInvite,
-    rejectInvite,
-    updateSharePermission,
-    deleteShare,
     login,
     register,
     logout,
@@ -149,41 +134,27 @@ export default function App() {
     month: 'short',
   })
 
-  const selectedShareUser = shareUsers.find((item) => item.profile.id === selectedShareUserId) || null
-
-  const ownedShareUsers = shareUsers.filter((item) => item.relation?.ownerUserId === session?.user.id)
   const canResetOwnData = session?.user.id === DATA_RESET_ALLOWED_USER_ID
 
   const mealsForGrocery = useMemo(() => {
-    if (viewMode !== 'combined') {
-      return (plan?.slots || [])
-        .map((slot) => weekState?.mealOverrides?.[slot.slot] || slot.meal)
-        .filter((meal): meal is NonNullable<typeof meal> => Boolean(meal))
-    }
+    return (plan?.slots || [])
+      .map((slot) => weekState?.mealOverrides?.[slot.slot] || slot.meal)
+      .filter((meal): meal is NonNullable<typeof meal> => Boolean(meal))
+  }, [plan?.slots, weekState?.mealOverrides])
 
-    const meals = combinedSlots.flatMap((slot) => {
-      return Object.values(slot.users)
-        .map((entry) => entry.meal)
-        .filter((meal): meal is NonNullable<typeof meal> => Boolean(meal))
-    })
-
-    return meals
-  }, [combinedSlots, plan?.slots, viewMode, weekState?.mealOverrides])
+  useEffect(() => {
+    if (!session?.accessToken) return
+    if (viewMode === 'my') return
+    setViewMode('my')
+  }, [session?.accessToken, setViewMode, viewMode])
 
   const globalProcessLabel = useMemo(() => {
     if (autoGeneratingMeals) return 'Generando platillos y aplicando alternativas para la semana...'
     if (actionLoading.logout) return 'Cerrando sesión...'
-    if (actionLoading.loadCombinedPlan) return 'Cargando vista combinada...'
-    if (actionLoading.sendShareInvite) return 'Enviando invitación...'
-    if (actionLoading.searchShareCandidates) return 'Buscando usuarios...'
-    if (actionLoading.acceptInvite) return 'Aceptando invitación...'
-    if (actionLoading.rejectInvite) return 'Rechazando invitación...'
-    if (actionLoading.updateSharePermission) return 'Actualizando permisos compartidos...'
-    if (actionLoading.deleteShare) return 'Quitando acceso compartido...'
     if (actionLoading.updateGroceryState) return 'Guardando cambios de la lista...'
     if (loading && !plan) return 'Sincronizando datos de tu cuenta...'
     return ''
-  }, [actionLoading.acceptInvite, actionLoading.deleteShare, actionLoading.loadCombinedPlan, actionLoading.logout, actionLoading.rejectInvite, actionLoading.searchShareCandidates, actionLoading.sendShareInvite, actionLoading.updateGroceryState, actionLoading.updateSharePermission, autoGeneratingMeals, loading, plan])
+  }, [actionLoading.logout, actionLoading.updateGroceryState, autoGeneratingMeals, loading, plan])
 
   const overlayProcessLabel = globalProcessLabel || currentLabel || 'Procesando solicitud...'
 
@@ -274,23 +245,6 @@ export default function App() {
     return generated
   }
 
-  const handleCreateShare = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setShareMessage('')
-
-    const targetUserId = shareUserIdInput.trim()
-    if (!targetUserId) {
-      setShareMessage('Ingresa el user id del usuario con quien quieres compartir')
-      return
-    }
-
-    await sendShareInvite(targetUserId, shareCanEditInput)
-    setShareMessage('Invitación enviada correctamente')
-    setShareUserIdInput('')
-    setShareCanEditInput(false)
-    setShareSearchInput('')
-  }
-
   const handleResetMyData = async () => {
     setResetMessage('')
 
@@ -311,12 +265,6 @@ export default function App() {
 
     setResetMessage('Datos eliminados. Recargando...')
     window.location.reload()
-  }
-
-  const handleSearchShareCandidates = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const nextQuery = e.target.value
-    setShareSearchInput(nextQuery)
-    await searchShareCandidates(nextQuery)
   }
 
   if (!session) {
@@ -449,158 +397,6 @@ export default function App() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-2 mt-4">
-            <button
-              onClick={() => setViewMode('my')}
-              className={`py-2 text-xs font-semibold rounded-xl ${viewMode === 'my' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600'}`}
-            >
-              Mi plan
-            </button>
-            <button
-              onClick={() => setViewMode('combined')}
-              className={`py-2 text-xs font-semibold rounded-xl ${viewMode === 'combined' ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-600'}`}
-            >
-              Combinada
-            </button>
-          </div>
-
-          {viewMode === 'combined' && (
-            <div className="mt-2 space-y-2">
-              <select
-                value={selectedShareUserId}
-                onChange={(e) => setSelectedShareUserId(e.target.value)}
-                disabled={actionLoading.loadCombinedPlan}
-                className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm"
-              >
-                <option value="">Selecciona usuario compartido</option>
-                {shareUsers.map((item) => (
-                  <option key={item.profile.id} value={item.profile.id}>
-                    {item.profile.name}
-                  </option>
-                ))}
-              </select>
-
-              <form onSubmit={handleCreateShare} className="bg-gray-50 border border-gray-200 rounded-xl p-2">
-                <p className="text-[11px] text-gray-500 mb-1">Compartir por nombre o email</p>
-                <input
-                  type="text"
-                  value={shareSearchInput}
-                  onChange={(e) => void handleSearchShareCandidates(e)}
-                  disabled={actionLoading.searchShareCandidates || actionLoading.sendShareInvite}
-                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs mb-2"
-                  placeholder="Buscar usuario..."
-                />
-
-                {actionLoading.searchShareCandidates && (
-                  <p className="text-[11px] text-gray-500 mb-2">Buscando coincidencias...</p>
-                )}
-
-                {shareCandidates.length > 0 && (
-                  <div className="max-h-28 overflow-y-auto border border-gray-200 rounded-lg bg-white mb-2">
-                    {shareCandidates.map((candidate) => (
-                      <button
-                        key={candidate.id}
-                        type="button"
-                        onClick={() => {
-                          setShareUserIdInput(candidate.id)
-                          setShareSearchInput(`${candidate.name} (${candidate.email})`)
-                        }}
-                        className="w-full text-left px-2 py-1.5 hover:bg-gray-50 border-b last:border-b-0"
-                      >
-                        <p className="text-xs font-medium text-gray-800">{candidate.name}</p>
-                        <p className="text-[11px] text-gray-500">{candidate.email}</p>
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                <p className="text-[11px] text-gray-500 mb-1">UUID seleccionado (fallback manual)</p>
-                <input
-                  type="text"
-                  value={shareUserIdInput}
-                  onChange={(e) => setShareUserIdInput(e.target.value)}
-                  disabled={actionLoading.sendShareInvite}
-                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs mb-2"
-                  placeholder="user_id"
-                />
-                <label className="flex items-center gap-2 text-xs text-gray-600 mb-2">
-                  <input
-                    type="checkbox"
-                    checked={shareCanEditInput}
-                    onChange={(e) => setShareCanEditInput(e.target.checked)}
-                    disabled={actionLoading.sendShareInvite}
-                  />
-                  Permitir edición
-                </label>
-                <button
-                  type="submit"
-                  disabled={actionLoading.sendShareInvite}
-                  className="w-full bg-emerald-600 text-white rounded-lg py-1.5 text-xs font-semibold"
-                >
-                  {actionLoading.sendShareInvite ? 'Compartiendo...' : 'Compartir'}
-                </button>
-                {shareMessage && <p className="text-[11px] text-emerald-700 mt-2">{shareMessage}</p>}
-              </form>
-
-              {ownedShareUsers.length > 0 && (
-                <div className="space-y-1">
-                  {ownedShareUsers.map((item) => (
-                    <div key={item.profile.id} className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-2 py-1.5">
-                      <span className="text-xs text-gray-700 truncate pr-2">{item.profile.name}</span>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => void updateSharePermission(item.profile.id, !item.relation?.canEdit)}
-                          disabled={actionLoading.updateSharePermission || actionLoading.deleteShare}
-                          className="text-[11px] px-2 py-1 rounded bg-gray-100 text-gray-700"
-                        >
-                          {actionLoading.updateSharePermission ? 'Guardando...' : item.relation?.canEdit ? 'Solo ver' : 'Puede editar'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void deleteShare(item.profile.id)}
-                          disabled={actionLoading.deleteShare || actionLoading.updateSharePermission}
-                          className="text-[11px] px-2 py-1 rounded bg-red-50 text-red-700"
-                        >
-                          {actionLoading.deleteShare ? 'Quitando...' : 'Quitar'}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {incomingInvites.length > 0 && (
-                <div className="space-y-1">
-                  <p className="text-[11px] font-semibold text-gray-500">Invitaciones pendientes</p>
-                  {incomingInvites.map((invite) => (
-                    <div key={invite.id} className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-lg px-2 py-1.5">
-                      <span className="text-xs text-amber-900 truncate pr-2">De: {invite.ownerUserId.slice(0, 8)}...</span>
-                      <div className="flex gap-1">
-                        <button
-                          type="button"
-                          onClick={() => void acceptInvite(invite.id)}
-                          disabled={actionLoading.acceptInvite || actionLoading.rejectInvite}
-                          className="text-[11px] px-2 py-1 rounded bg-emerald-600 text-white"
-                        >
-                          {actionLoading.acceptInvite ? 'Aceptando...' : 'Aceptar'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => void rejectInvite(invite.id)}
-                          disabled={actionLoading.rejectInvite || actionLoading.acceptInvite}
-                          className="text-[11px] px-2 py-1 rounded bg-gray-200 text-gray-700"
-                        >
-                          {actionLoading.rejectInvite ? 'Rechazando...' : 'Rechazar'}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
           {error && (
             <div className="mt-3 text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
               {error}
@@ -608,8 +404,6 @@ export default function App() {
           )}
         </div>
         </div>
-
-        <LegalFooter onOpen={setLegalView} className="px-5 pt-2 pb-1" />
 
         <div className="flex-1 overflow-y-auto pb-28">
         <Suspense
@@ -662,29 +456,21 @@ export default function App() {
                   )}
                 </div>
               )
-            : tab === 'dieta' && viewMode === 'combined' && actionLoading.loadCombinedPlan
-              ? (
-                <div className="px-4 py-10 flex items-center justify-center">
-                  <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 text-sm text-gray-600 shadow-sm">
-                    Cargando dieta combinada...
-                  </div>
-                </div>
-              )
-              : (
+            : (
               <WeeklyDiet
-                key={`${viewMode}-${plan?.id || 'no-plan'}-${plan?.week || 'no-week'}`}
+                key={`my-${plan?.id || 'no-plan'}-${plan?.week || 'no-week'}`}
                 focusMode={dietMode}
-                mode={viewMode}
+                mode="my"
                 accessToken={session.accessToken}
                 slots={activeSlots}
                 combinedSlots={combinedSlots}
                 weekState={weekState}
                 onSyncWeekState={syncWeekState}
                 myUserId={session.user.id}
-                otherUserId={selectedShareUserId || undefined}
+                otherUserId={undefined}
                 myUserName={profile?.name}
-                otherUserName={selectedShareUser?.profile.name}
-                canEditRelationship={Boolean(selectedShareUser?.relation?.canEdit)}
+                otherUserName={undefined}
+                canEditRelationship={false}
                 onSwapMeal={swapMeal}
                 onSetSlotCompleted={setSlotCompleted}
                 onSetSlotMeal={setSlotMeal}
@@ -706,7 +492,6 @@ export default function App() {
                 weekState={weekState}
                 onChangeGroceryState={updateGroceryState}
                 onSyncWeekState={syncWeekState}
-                isSavingState={actionLoading.updateGroceryState}
               />
               )
               : (
@@ -735,6 +520,8 @@ export default function App() {
                 </div>
               )}
         </Suspense>
+
+        <LegalFooter onOpen={setLegalView} className="px-5 pt-4 pb-32" />
         </div>
 
         <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-[max(12px,env(safe-area-inset-bottom))]">

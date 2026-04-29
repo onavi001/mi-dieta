@@ -18,10 +18,9 @@ interface GroceryListProps {
   weekState?: WeekState | null
   onChangeGroceryState: (nextState: { checked: string[]; onlyPending: boolean }) => Promise<void>
   onSyncWeekState?: (patch: WeekStatePatch) => Promise<boolean>
-  isSavingState?: boolean
 }
 
-export function GroceryList({ accessToken, meals, groceryState, weekState, onChangeGroceryState, onSyncWeekState, isSavingState = false }: GroceryListProps) {
+export function GroceryList({ accessToken, meals, groceryState, weekState, onChangeGroceryState, onSyncWeekState }: GroceryListProps) {
   const { adjustments, getAdjustment, updateAdjustment, removeAdjustment, clearAllAdjustments, restoreAdjustments } = useGroceryAdjustments(
     (next) => void Promise.resolve(onSyncWeekState?.({ groceryAdjustments: next })).then((saved) => {
       if (saved) {
@@ -48,7 +47,6 @@ export function GroceryList({ accessToken, meals, groceryState, weekState, onCha
   const [saveFeedback, setSaveFeedback] = useState('')
   const [saveError, setSaveError] = useState('')
   const [isGeneratingList, setIsGeneratingList] = useState(false)
-  const [isPersistingState, setIsPersistingState] = useState(false)
   const saveFeedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const saveErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -74,12 +72,7 @@ export function GroceryList({ accessToken, meals, groceryState, weekState, onCha
   const onlyPending = groceryState.onlyPending
 
   const persistGroceryState = async (nextState: { checked: string[]; onlyPending: boolean }) => {
-    setIsPersistingState(true)
-    try {
-      await onChangeGroceryState(nextState)
-    } finally {
-      setIsPersistingState(false)
-    }
+    await onChangeGroceryState(nextState)
   }
 
   const toggleItem = (id: string) => {
@@ -207,12 +200,6 @@ export function GroceryList({ accessToken, meals, groceryState, weekState, onCha
           </Button>
         </div>
       </div>
-
-      {(isPersistingState || isSavingState) && (
-        <div className="mb-4 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs font-semibold text-sky-800">
-          Guardando cambios de la lista...
-        </div>
-      )}
 
       {filteredSomeIngredient && (
         <div className="mb-6 rounded-2xl border border-sky-200 bg-sky-50 p-4">

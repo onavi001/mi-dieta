@@ -119,8 +119,11 @@ export function useDietApi() {
     body?: unknown,
     tokenOverride?: string
   ): Promise<T> => {
-    const isBackgroundEventTrack = path.includes('/api/users/me/events')
-    const endRequest = isBackgroundEventTrack
+    const isNonBlockingRequest =
+      path.includes('/api/users/me/events') ||
+      path.includes('/api/plans/my/complete') ||
+      path.includes('/api/plans/my/grocery')
+    const endRequest = isNonBlockingRequest
       ? () => {}
       : startApiRequest(getDietRequestLabel(path, method))
 
@@ -593,9 +596,27 @@ export function useDietApi() {
   }, [])
 
   const setSlotCompleted = useCallback(async (slotId: string, completed: boolean) => {
-    const data = await api.setSlotCompleted(slotId, completed)
+    let previousPlan: WeekPlan | null = null
+    setPlan((prev) => {
+      previousPlan = prev
+      if (!prev) return prev
+      return {
+        ...prev,
+        slots: prev.slots.map((slot) =>
+          slot.slot === slotId
+            ? { ...slot, completed }
+            : slot
+        ),
+      }
+    })
 
-    applyPlanPayload(data)
+    try {
+      const data = await api.setSlotCompleted(slotId, completed)
+      applyPlanPayload(data)
+    } catch (error) {
+      if (previousPlan) setPlan(previousPlan)
+      throw error
+    }
   }, [api, applyPlanPayload])
 
   const setSlotMeal = useCallback(async (slotId: string, meal: Comida, week?: string) => {
@@ -612,9 +633,27 @@ export function useDietApi() {
 
   const updateGroceryState = useCallback(async (nextState: { checked: string[]; onlyPending: boolean }) => {
     await runWithAction('updateGroceryState', async () => {
-      const data = await api.updateGroceryState(nextState)
-      applyPlanPayload(data)
-      return true
+      let previousPlan: WeekPlan | null = null
+      setPlan((prev) => {
+        previousPlan = prev
+        if (!prev) return prev
+        return {
+          ...prev,
+          groceryState: {
+            checked: [...nextState.checked],
+            onlyPending: nextState.onlyPending,
+          },
+        }
+      })
+
+      try {
+        const data = await api.updateGroceryState(nextState)
+        applyPlanPayload(data)
+        return true
+      } catch (error) {
+        if (previousPlan) setPlan(previousPlan)
+        throw error
+      }
     })
   }, [api, applyPlanPayload, runWithAction])
 
