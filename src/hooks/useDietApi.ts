@@ -471,10 +471,22 @@ export function useDietApi() {
       return
     }
 
+    const runBootstrapBackgroundTask = (task: () => Promise<unknown>) => {
+      void task().catch(() => {
+        // Non-critical startup task failed; keep app responsive and continue.
+      })
+    }
+
     await runWithLoading(async () => {
-      await Promise.all([loadProfile(), loadMyPlan(), loadShareUsers(), loadInvites(), loadIngredientReference(), loadDailyEngagement()])
+      // Block only on the data required to render today's diet quickly.
+      await Promise.all([loadProfile(), loadMyPlan()])
       return true
     }, 'Error al cargar datos')
+
+    // Load non-critical data in background to avoid delaying first paint.
+    runBootstrapBackgroundTask(async () => {
+      await Promise.all([loadShareUsers(), loadInvites(), loadIngredientReference(), loadDailyEngagement()])
+    })
 
     setIsBootstrapped(true)
   }, [loadDailyEngagement, loadIngredientReference, loadInvites, loadMyPlan, loadProfile, loadShareUsers, runWithLoading, session?.accessToken])

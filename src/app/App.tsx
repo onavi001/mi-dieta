@@ -114,8 +114,10 @@ export default function App() {
 
   useEffect(() => {
     if (!session?.accessToken) return
+    // Defer nutrition summary on startup unless it's needed for current view.
+    if (tab !== 'nutricion' && plan) return
     void loadSummary()
-  }, [loadSummary, session?.accessToken])
+  }, [loadSummary, plan, session?.accessToken, tab])
 
   useEffect(() => {
     try {
